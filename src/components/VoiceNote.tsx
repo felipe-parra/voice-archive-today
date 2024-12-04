@@ -32,8 +32,14 @@ export const VoiceNote = () => {
       const audioBlob = await recorderRef.current.stopRecording();
       setIsRecording(false);
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create user-specific folder path
+      const fileName = `${user.id}/recording-${Date.now()}.webm`;
+      
       // Upload to Supabase Storage
-      const fileName = `recording-${Date.now()}.webm`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice_notes')
         .upload(fileName, audioBlob);
@@ -52,6 +58,7 @@ export const VoiceNote = () => {
           title: `Recording ${new Date().toLocaleTimeString()}`,
           audio_url: publicUrl,
           duration: 0, // You could calculate actual duration if needed
+          user_id: user.id // Add user_id to the insert
         })
         .select()
         .single();
@@ -76,11 +83,15 @@ export const VoiceNote = () => {
   };
 
   React.useEffect(() => {
-    // Load existing recordings
+    // Load existing recordings for the current user
     const loadRecordings = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data, error } = await supabase
         .from('voice_notes')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {

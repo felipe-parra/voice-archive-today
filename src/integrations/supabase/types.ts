@@ -17,6 +17,7 @@ export type Database = {
           id: string
           title: string | null
           transcript: string | null
+          user_id: string
         }
         Insert: {
           audio_url?: string | null
@@ -25,6 +26,7 @@ export type Database = {
           id?: string
           title?: string | null
           transcript?: string | null
+          user_id?: string
         }
         Update: {
           audio_url?: string | null
@@ -33,6 +35,7 @@ export type Database = {
           id?: string
           title?: string | null
           transcript?: string | null
+          user_id?: string
         }
         Relationships: []
       }
