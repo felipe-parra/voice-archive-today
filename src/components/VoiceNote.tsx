@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { EditVoiceNoteForm } from "./EditVoiceNoteForm";
+import { AudioFileUpload } from "./AudioFileUpload";
 
 export const VoiceNote = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -48,33 +49,28 @@ export const VoiceNote = () => {
       const audioBlob = await recorderRef.current.stopRecording();
       setIsRecording(false);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Create user-specific folder path
       const fileName = `${user.id}/recording-${Date.now()}.webm`;
       
-      // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice_notes')
         .upload(fileName, audioBlob);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('voice_notes')
         .getPublicUrl(fileName);
 
-      // Save metadata to database
       const { data: noteData, error: dbError } = await supabase
         .from('voice_notes')
         .insert({
           title: `Recording ${new Date().toLocaleTimeString()}`,
           audio_url: publicUrl,
-          duration: 0, // You could calculate actual duration if needed
-          user_id: user.id // Add user_id to the insert
+          duration: 0,
+          user_id: user.id
         })
         .select()
         .single();
@@ -99,7 +95,6 @@ export const VoiceNote = () => {
   };
 
   React.useEffect(() => {
-    // Load existing recordings for the current user
     const loadRecordings = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -156,12 +151,14 @@ export const VoiceNote = () => {
           </TabsList>
 
           <TabsContent value="record" className="mt-8">
-            <div className="flex flex-col items-center space-y-8">
+            <div className="flex flex-col items-center space-y-8 min-h-[60vh] relative">
               {isRecording && (
                 <div className="audio-visualizer animate-pulse" />
               )}
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4 absolute bottom-8">
+                <AudioFileUpload onUploadComplete={handleSheetClose} />
+                
                 <Button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isLoading}
@@ -178,7 +175,7 @@ export const VoiceNote = () => {
               </div>
               
               {isRecording && (
-                <p className="text-center text-primary animate-pulse">Recording...</p>
+                <p className="text-center text-primary animate-pulse absolute bottom-32">Recording...</p>
               )}
             </div>
           </TabsContent>
@@ -196,7 +193,7 @@ export const VoiceNote = () => {
                       <p className="text-sm text-gray-500 mt-1">{recording.description}</p>
                     )}
                     {recording.tags && recording.tags.length > 0 && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {recording.tags.map((tag, index) => (
                           <span
                             key={index}
