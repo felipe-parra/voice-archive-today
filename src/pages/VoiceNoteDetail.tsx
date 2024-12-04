@@ -12,6 +12,16 @@ const VoiceNoteDetail = () => {
   const { data: voiceNote, isLoading } = useQuery({
     queryKey: ["voiceNote", id],
     queryFn: async () => {
+      // If id is "new", return a blank voice note template
+      if (id === "new") {
+        return {
+          id: "new",
+          title: "New Document",
+          created_at: new Date().toISOString(),
+          content: "",
+        };
+      }
+
       const { data, error } = await supabase
         .from("voice_notes")
         .select("*")
@@ -21,6 +31,7 @@ const VoiceNoteDetail = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!id, // Only run query if we have an ID
   });
 
   if (isLoading) {
@@ -31,7 +42,7 @@ const VoiceNoteDetail = () => {
     );
   }
 
-  if (!voiceNote) {
+  if (!voiceNote && id !== "new") {
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-lg text-gray-500">Voice note not found</p>
@@ -52,47 +63,51 @@ const VoiceNoteDetail = () => {
 
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
-          <h1 className="text-3xl font-bold text-primary mb-4">{voiceNote.title}</h1>
+          <h1 className="text-3xl font-bold text-primary mb-4">
+            {id === "new" ? "New Document" : voiceNote?.title}
+          </h1>
           
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <div className="flex items-center text-gray-400">
-                <Calendar className="mr-2 h-4 w-4" />
-                {format(new Date(voiceNote.created_at), "PPP")}
-              </div>
-              
-              {voiceNote.duration && (
+          {id !== "new" && (
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
                 <div className="flex items-center text-gray-400">
-                  <Clock className="mr-2 h-4 w-4" />
-                  {Math.floor(voiceNote.duration / 60)}:{(voiceNote.duration % 60).toString().padStart(2, '0')}
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {format(new Date(voiceNote.created_at), "PPP")}
                 </div>
-              )}
+                
+                {voiceNote.duration && (
+                  <div className="flex items-center text-gray-400">
+                    <Clock className="mr-2 h-4 w-4" />
+                    {Math.floor(voiceNote.duration / 60)}:{(voiceNote.duration % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
 
-              {voiceNote.tags && voiceNote.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <Tags className="h-4 w-4 text-gray-400 mr-2" />
-                  {voiceNote.tags.map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                {voiceNote.tags && voiceNote.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <Tags className="h-4 w-4 text-gray-400 mr-2" />
+                    {voiceNote.tags.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {voiceNote.description && (
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-primary">Description</h3>
+                  <p className="text-gray-300">{voiceNote.description}</p>
                 </div>
               )}
             </div>
-
-            {voiceNote.description && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-primary">Description</h3>
-                <p className="text-gray-300">{voiceNote.description}</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        {voiceNote.audio_url && (
+        {id !== "new" && voiceNote.audio_url && (
           <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
             <h3 className="text-lg font-semibold text-primary mb-4">Audio</h3>
             <audio
@@ -105,7 +120,7 @@ const VoiceNoteDetail = () => {
           </div>
         )}
 
-        {voiceNote.transcript && (
+        {id !== "new" && voiceNote.transcript && (
           <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
             <div className="flex items-center mb-4">
               <FileText className="mr-2 h-5 w-5 text-primary" />
