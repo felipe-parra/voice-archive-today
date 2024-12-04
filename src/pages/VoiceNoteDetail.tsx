@@ -17,6 +17,20 @@ const VoiceNoteDetail = () => {
   const { data: voiceNote, isLoading } = useQuery({
     queryKey: ["voiceNote", id],
     queryFn: async () => {
+      if (id === "new") {
+        return {
+          id: "new",
+          title: "New Document",
+          created_at: new Date().toISOString(),
+          audio_url: "",
+          duration: 0,
+          description: "",
+          tags: [],
+          transcript: "",
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        };
+      }
+
       const { data, error } = await supabase
         .from("voice_notes")
         .select("*")
@@ -26,7 +40,7 @@ const VoiceNoteDetail = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!id && id !== "new",
+    enabled: !!id,
   });
 
   const { data: document } = useQuery({
@@ -46,7 +60,13 @@ const VoiceNoteDetail = () => {
 
   const editor: BlockNoteEditor = useBlockNote({
     initialContent: document ? JSON.parse(document.content) : undefined,
-    onEditorContentChange: async (editor) => {
+  });
+
+  // Add event listener for content changes
+  React.useEffect(() => {
+    if (!editor || !id) return;
+
+    const saveContent = async () => {
       const content = JSON.stringify(editor.topLevelBlocks);
       
       try {
@@ -78,8 +98,12 @@ const VoiceNoteDetail = () => {
           variant: "destructive",
         });
       }
-    },
-  });
+    };
+
+    // Debounce the save operation
+    const timeoutId = setTimeout(saveContent, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [editor?.topLevelBlocks, document, id, voiceNote?.title, toast]);
 
   if (isLoading) {
     return (
@@ -113,7 +137,7 @@ const VoiceNoteDetail = () => {
                 {format(new Date(voiceNote?.created_at || new Date()), "PPP")}
               </div>
               
-              {voiceNote?.duration && (
+              {voiceNote?.duration !== undefined && voiceNote.duration > 0 && (
                 <div className="flex items-center text-gray-400">
                   <Clock className="mr-2 h-4 w-4" />
                   {Math.floor(voiceNote.duration / 60)}:{(voiceNote.duration % 60).toString().padStart(2, '0')}
