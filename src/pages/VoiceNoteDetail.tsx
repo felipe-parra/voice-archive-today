@@ -1,19 +1,14 @@
-import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, Clock, Tags, FileText } from "lucide-react";
 import { format } from "date-fns";
-import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
-import { BlockNoteView, useBlockNote } from "@blocknote/react";
-import "@blocknote/core/style.css";
-import { useToast } from "@/components/ui/use-toast";
+import { DocumentEditor } from "@/components/DocumentEditor";
 
 const VoiceNoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const { data: voiceNote, isLoading } = useQuery({
     queryKey: ["voiceNote", id],
@@ -58,53 +53,6 @@ const VoiceNoteDetail = () => {
     },
     enabled: !!id && id !== "new",
   });
-
-  const editor: BlockNoteEditor = useBlockNote({
-    initialContent: document ? JSON.parse(document.content) : undefined,
-  });
-
-  // Add event listener for content changes
-  useEffect(() => {
-    if (!editor || !id) return;
-
-    const saveContent = async () => {
-      const content = JSON.stringify(editor.topLevelBlocks);
-      
-      try {
-        if (document) {
-          // Update existing document
-          const { error } = await supabase
-            .from("documents")
-            .update({ content })
-            .eq("id", document.id);
-          
-          if (error) throw error;
-        } else {
-          // Create new document
-          const { error } = await supabase
-            .from("documents")
-            .insert({
-              content,
-              voice_note_id: id,
-              title: voiceNote?.title || "New Document"
-            });
-          
-          if (error) throw error;
-        }
-      } catch (error) {
-        console.error("Error saving document:", error);
-        toast({
-          title: "Error",
-          description: "Failed to save document",
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Debounce the save operation
-    const timeoutId = setTimeout(saveContent, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [editor?.topLevelBlocks, document, id, voiceNote?.title, toast]);
 
   if (isLoading) {
     return (
@@ -192,10 +140,14 @@ const VoiceNoteDetail = () => {
           </div>
         )}
 
-        <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
-          <h3 className="text-lg font-semibold text-primary mb-4">Document</h3>
-          <BlockNoteView editor={editor} theme="dark" />
-        </div>
+        {id && (
+          <DocumentEditor
+            initialContent={document?.content}
+            documentId={document?.id}
+            voiceNoteId={id}
+            title={voiceNote?.title || "New Document"}
+          />
+        )}
       </div>
     </div>
   );
