@@ -9,12 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      transcripts: {
+        Row: {
+          created_at: string
+          id: string
+          text_content: string | null
+          updated_at: string
+          user_id: string
+          voice_note_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text_content?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_note_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text_content?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_voice_note"
+            columns: ["voice_note_id"]
+            isOneToOne: false
+            referencedRelation: "voice_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcripts_voice_note_id_fkey"
+            columns: ["voice_note_id"]
+            isOneToOne: false
+            referencedRelation: "voice_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_notes: {
         Row: {
           audio_url: string | null
           created_at: string
+          description: string | null
           duration: number | null
           id: string
+          tags: string[] | null
           title: string | null
           transcript: string | null
           user_id: string
@@ -22,8 +66,10 @@ export type Database = {
         Insert: {
           audio_url?: string | null
           created_at?: string
+          description?: string | null
           duration?: number | null
           id?: string
+          tags?: string[] | null
           title?: string | null
           transcript?: string | null
           user_id?: string
@@ -31,8 +77,10 @@ export type Database = {
         Update: {
           audio_url?: string | null
           created_at?: string
+          description?: string | null
           duration?: number | null
           id?: string
+          tags?: string[] | null
           title?: string | null
           transcript?: string | null
           user_id?: string

@@ -1,15 +1,31 @@
 import React, { useState, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Mic, Square, Play, List, Loader2 } from "lucide-react";
+import { Mic, Square, Play, List, Loader2, Edit2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { AudioRecorder } from "@/utils/audioRecorder";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { EditVoiceNoteForm } from "./EditVoiceNoteForm";
 
 export const VoiceNote = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [recordings, setRecordings] = useState<{ id: string; title: string; audio_url: string; created_at: string }[]>([]);
+  const [recordings, setRecordings] = useState<{
+    id: string;
+    title: string;
+    audio_url: string;
+    created_at: string;
+    description?: string;
+    tags?: string[];
+    transcript?: string;
+  }[]>([]);
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder());
   const { toast } = useToast();
 
@@ -89,13 +105,13 @@ export const VoiceNote = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('voice_notes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("voice_notes")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error loading recordings:', error);
+        console.error("Error loading recordings:", error);
         return;
       }
 
@@ -131,7 +147,7 @@ export const VoiceNote = () => {
                 <Button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isLoading}
-                  className={`bubble h-16 w-16 ${isRecording ? 'animate-pulse glow' : ''}`}
+                  className={`bubble h-16 w-16 ${isRecording ? "animate-pulse glow" : ""}`}
                 >
                   {isLoading ? (
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -156,9 +172,24 @@ export const VoiceNote = () => {
                   key={recording.id}
                   className="flex items-center justify-between rounded-lg bg-accent/50 p-4 backdrop-blur-sm"
                 >
-                  <div>
+                  <div className="flex-grow">
                     <p className="text-primary">{recording.title}</p>
-                    <p className="text-sm text-gray-400">
+                    {recording.description && (
+                      <p className="text-sm text-gray-500 mt-1">{recording.description}</p>
+                    )}
+                    {recording.tags && recording.tags.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        {recording.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-400 mt-2">
                       {new Date(recording.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -171,6 +202,46 @@ export const VoiceNote = () => {
                     >
                       <Play className="h-4 w-4" />
                     </Button>
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent>
+                        <SheetHeader>
+                          <SheetTitle>Edit Voice Note</SheetTitle>
+                        </SheetHeader>
+                        <div className="mt-4">
+                          <EditVoiceNoteForm
+                            voiceNote={recording}
+                            onClose={() => {
+                              const sheet = document.querySelector('[data-state="open"]');
+                              if (sheet) {
+                                const closeButton = sheet.querySelector('button[type="button"]');
+                                closeButton?.click();
+                              }
+                              // Refresh the recordings list
+                              const loadRecordings = async () => {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (!user) return;
+                                const { data, error } = await supabase
+                                  .from("voice_notes")
+                                  .select("*")
+                                  .eq("user_id", user.id)
+                                  .order("created_at", { ascending: false });
+                                if (error) {
+                                  console.error("Error loading recordings:", error);
+                                  return;
+                                }
+                                setRecordings(data);
+                              };
+                              loadRecordings();
+                            }}
+                          />
+                        </div>
+                      </SheetContent>
+                    </Sheet>
                   </div>
                 </div>
               ))}
