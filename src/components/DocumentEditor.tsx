@@ -25,7 +25,8 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
     let timeoutId: NodeJS.Timeout;
     
     const saveContent = async () => {
-      const content = JSON.stringify(editor.getContent());
+      const blocks = editor.topLevelBlocks;
+      const content = JSON.stringify(blocks);
       console.log("Saving content:", content);
       
       try {
@@ -66,12 +67,12 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
     };
 
     // Subscribe to content changes
-    const unsubscribe = editor.onEditorContentChange(handleContentChange);
+    editor.onEditorContentChange(handleContentChange);
 
     // Cleanup
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      unsubscribe();
+      editor.onEditorContentChange(null); // Remove the content change listener
     };
   }, [editor, documentId, voiceNoteId, title, toast]);
 
