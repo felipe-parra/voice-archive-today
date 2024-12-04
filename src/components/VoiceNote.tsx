@@ -126,6 +126,24 @@ export const VoiceNote = () => {
     audio.play();
   };
 
+  const handleSheetClose = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("voice_notes")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading recordings:", error);
+      return;
+    }
+
+    setRecordings(data);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="mx-auto max-w-2xl">
@@ -215,29 +233,7 @@ export const VoiceNote = () => {
                         <div className="mt-4">
                           <EditVoiceNoteForm
                             voiceNote={recording}
-                            onClose={() => {
-                              const sheet = document.querySelector('[data-state="open"]');
-                              if (sheet) {
-                                const closeButton = sheet.querySelector('button[type="button"]');
-                                closeButton?.click();
-                              }
-                              // Refresh the recordings list
-                              const loadRecordings = async () => {
-                                const { data: { user } } = await supabase.auth.getUser();
-                                if (!user) return;
-                                const { data, error } = await supabase
-                                  .from("voice_notes")
-                                  .select("*")
-                                  .eq("user_id", user.id)
-                                  .order("created_at", { ascending: false });
-                                if (error) {
-                                  console.error("Error loading recordings:", error);
-                                  return;
-                                }
-                                setRecordings(data);
-                              };
-                              loadRecordings();
-                            }}
+                            onClose={handleSheetClose}
                           />
                         </div>
                       </SheetContent>
