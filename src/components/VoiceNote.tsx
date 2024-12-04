@@ -4,6 +4,8 @@ import { List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { RecordingControls } from "./RecordingControls";
 import { VoiceNoteList } from "./VoiceNoteList";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const VoiceNote = () => {
   const [recordings, setRecordings] = useState<{
@@ -15,27 +17,61 @@ export const VoiceNote = () => {
     tags?: string[];
     transcript?: string;
   }[]>([]);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     loadRecordings();
   }, []);
 
   const loadRecordings = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      
+      if (authError) {
+        console.error("Auth error:", authError);
+        toast({
+          title: "Authentication Error",
+          description: "Please try logging in again",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from("voice_notes")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      if (!session) {
+        console.log("No session found");
+        navigate("/login");
+        return;
+      }
 
-    if (error) {
-      console.error("Error loading recordings:", error);
-      return;
+      console.log("Fetching recordings for user:", session.user.id);
+      
+      const { data, error } = await supabase
+        .from("voice_notes")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading recordings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load recordings. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Loaded recordings:", data);
+      setRecordings(data || []);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
-
-    setRecordings(data);
   };
 
   return (
