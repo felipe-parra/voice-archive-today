@@ -19,6 +19,12 @@ const VoiceNoteDetail = () => {
           title: "New Document",
           created_at: new Date().toISOString(),
           content: "",
+          // Add all optional fields with default values
+          duration: null,
+          audio_url: null,
+          transcript: null,
+          description: null,
+          tags: [],
         };
       }
 
@@ -64,7 +70,7 @@ const VoiceNoteDetail = () => {
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
           <h1 className="text-3xl font-bold text-primary mb-4">
-            {id === "new" ? "New Document" : voiceNote?.title}
+            {voiceNote?.title}
           </h1>
           
           {id !== "new" && (
