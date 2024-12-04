@@ -17,44 +17,57 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
   
   const editor: BlockNoteEditor = useBlockNote({
     initialContent: initialContent ? JSON.parse(initialContent) : undefined,
-    onEditorContentChange: (editor) => {
-      const saveContent = async () => {
-        const content = JSON.stringify(editor.topLevelBlocks);
-        
-        try {
-          if (documentId) {
-            const { error } = await supabase
-              .from("documents")
-              .update({ content })
-              .eq("id", documentId);
-            
-            if (error) throw error;
-          } else {
-            const { error } = await supabase
-              .from("documents")
-              .insert({
-                content,
-                voice_note_id: voiceNoteId,
-                title
-              });
-            
-            if (error) throw error;
-          }
-        } catch (error) {
-          console.error("Error saving document:", error);
-          toast({
-            title: "Error",
-            description: "Failed to save document",
-            variant: "destructive",
-          });
-        }
-      };
+  });
 
+  useEffect(() => {
+    if (!editor) return;
+
+    const saveContent = async () => {
+      const content = JSON.stringify(editor.topLevelBlocks);
+      
+      try {
+        if (documentId) {
+          const { error } = await supabase
+            .from("documents")
+            .update({ content })
+            .eq("id", documentId);
+          
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("documents")
+            .insert({
+              content,
+              voice_note_id: voiceNoteId,
+              title
+            });
+          
+          if (error) throw error;
+        }
+      } catch (error) {
+        console.error("Error saving document:", error);
+        toast({
+          title: "Error",
+          description: "Failed to save document",
+          variant: "destructive",
+        });
+      }
+    };
+
+    const handleContentChange = () => {
       // Debounce the save operation
       const timeoutId = setTimeout(saveContent, 1000);
       return () => clearTimeout(timeoutId);
-    },
-  });
+    };
+
+    // Subscribe to content changes
+    editor.onEditorContentChange(handleContentChange);
+
+    // Cleanup subscription
+    return () => {
+      editor.removeOnEditorContentChange(handleContentChange);
+    };
+  }, [editor, documentId, voiceNoteId, title, toast]);
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
