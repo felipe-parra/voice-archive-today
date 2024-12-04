@@ -25,7 +25,7 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
     let timeoutId: NodeJS.Timeout;
     
     const saveContent = async () => {
-      const content = JSON.stringify(editor.getJSON());
+      const content = JSON.stringify(editor.toJSON());
       console.log("Saving content:", content);
       
       try {
