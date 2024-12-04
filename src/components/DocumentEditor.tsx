@@ -22,8 +22,11 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
   useEffect(() => {
     if (!editor) return;
 
+    let timeoutId: NodeJS.Timeout;
+    
     const saveContent = async () => {
-      const content = JSON.stringify(editor.topLevelBlocks);
+      const content = JSON.stringify(editor.getContent());
+      console.log("Saving content:", content);
       
       try {
         if (documentId) {
@@ -55,17 +58,20 @@ export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title 
     };
 
     const handleContentChange = () => {
-      // Debounce the save operation
-      const timeoutId = setTimeout(saveContent, 1000);
-      return () => clearTimeout(timeoutId);
+      // Clear any existing timeout
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      // Set new timeout for debouncing
+      timeoutId = setTimeout(saveContent, 1000);
     };
 
     // Subscribe to content changes
-    editor.onEditorContentChange(handleContentChange);
+    const unsubscribe = editor.onEditorContentChange(handleContentChange);
 
-    // Cleanup subscription
+    // Cleanup
     return () => {
-      editor.removeOnEditorContentChange(handleContentChange);
+      if (timeoutId) clearTimeout(timeoutId);
+      unsubscribe();
     };
   }, [editor, documentId, voiceNoteId, title, toast]);
 

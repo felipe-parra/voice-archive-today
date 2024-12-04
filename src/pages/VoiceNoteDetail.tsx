@@ -39,17 +39,22 @@ const VoiceNoteDetail = () => {
     enabled: !!id,
   });
 
-  const { data: document } = useQuery({
+  const { data: document, error: documentError } = useQuery({
     queryKey: ["document", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("*")
-        .eq("voice_note_id", id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("documents")
+          .select("*")
+          .eq("voice_note_id", id)
+          .maybeSingle();
 
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
+        if (error && error.code !== "PGRST116") throw error;
+        return data;
+      } catch (error) {
+        console.error("Error fetching document:", error);
+        return null;
+      }
     },
     enabled: !!id && id !== "new",
   });
