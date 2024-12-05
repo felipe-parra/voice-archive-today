@@ -10,7 +10,7 @@ const VoiceNoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: voiceNote, isLoading } = useQuery({
+  const { data: voiceNote, isLoading: isLoadingVoiceNote } = useQuery({
     queryKey: ["voiceNote", id],
     queryFn: async () => {
       if (id === "new") {
@@ -39,27 +39,24 @@ const VoiceNoteDetail = () => {
     enabled: !!id,
   });
 
-  const { data: document, error: documentError } = useQuery({
+  const { data: document, isLoading: isLoadingDocument } = useQuery({
     queryKey: ["document", id],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("documents")
-          .select("*")
-          .eq("voice_note_id", id)
-          .maybeSingle();
+      if (!id || id === "new") return null;
 
-        if (error && error.code !== "PGRST116") throw error;
-        return data;
-      } catch (error) {
-        console.error("Error fetching document:", error);
-        return null;
-      }
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("voice_note_id", id)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
     },
     enabled: !!id && id !== "new",
   });
 
-  if (isLoading) {
+  if (isLoadingVoiceNote || isLoadingDocument) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full border-4 border-primary border-t-transparent h-12 w-12"></div>
