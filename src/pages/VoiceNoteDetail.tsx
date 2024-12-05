@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -11,6 +11,7 @@ import { TranscriptDisplay } from "@/components/voice-note/TranscriptDisplay";
 const VoiceNoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: voiceNote, isLoading: isLoadingVoiceNote } = useQuery({
     queryKey: ["voiceNote", id],
@@ -58,6 +59,13 @@ const VoiceNoteDetail = () => {
     enabled: !!id && id !== "new",
   });
 
+  const handleTranscriptCreated = (newTranscript: string) => {
+    queryClient.setQueryData(["voiceNote", id], (oldData: any) => ({
+      ...oldData,
+      transcript: newTranscript,
+    }));
+  };
+
   if (isLoadingVoiceNote || isLoadingDocument) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -88,7 +96,11 @@ const VoiceNoteDetail = () => {
 
         <AudioPlayer audioUrl={voiceNote?.audio_url || ""} />
 
-        <TranscriptDisplay transcript={voiceNote?.transcript || ""} />
+        <TranscriptDisplay 
+          transcript={voiceNote?.transcript || ""} 
+          voiceNoteId={id || ""}
+          onTranscriptCreated={handleTranscriptCreated}
+        />
 
         {id && (
           <DocumentEditor
