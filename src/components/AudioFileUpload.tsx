@@ -83,10 +83,11 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
       />
       <Button
         onClick={() => fileInputRef.current?.click()}
-        variant="outline"
-        className="bubble glow-green"
+        variant={"link"}
+        className=""
       >
         <Upload className="h-6 w-6" />
+        <span>Upload audio</span>
       </Button>
     </div>
   );
