@@ -88,30 +88,31 @@ export const DocumentEditor = ({
     }
   }
 
-  useEffect(() => {
-    if (!editor) return
+  // useEffect(() => {
+  //   if (!editor) return
 
-    let timeoutId: NodeJS.Timeout
+  //   let timeoutId: NodeJS.Timeout
 
-    const handleContentChange = () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      timeoutId = setTimeout(saveContent, 5000)
-    }
+  //   const handleContentChange = () => {
+  //     if (timeoutId) clearTimeout(timeoutId)
+  //     timeoutId = setTimeout(saveContent, 5000)
+  //   }
 
-    editor.onEditorContentChange(handleContentChange)
+  //   editor.onEditorContentChange(handleContentChange)
 
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      editor.onEditorContentChange(null)
-    }
-  }, [editor, documentId, voiceNoteId, title])
+  //   return () => {
+  //     if (timeoutId) clearTimeout(timeoutId)
+  //     editor.onEditorContentChange(null)
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [editor, documentId, voiceNoteId, title])
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-primary">Document</h3>
-        <Button 
-          onClick={saveContent} 
+        <Button
+          onClick={saveContent}
           disabled={isSaving}
           variant="outline"
           size="sm"
@@ -120,7 +121,9 @@ export const DocumentEditor = ({
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </div>
-      <BlockNoteView editor={editor} theme="dark" />
+      <div className="block-note-view-container">
+        <BlockNoteView editor={editor} theme="dark" />
+      </div>
     </div>
   )
 }
