@@ -22,18 +22,30 @@ export const DocumentEditor = ({
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
 
+  // Safely parse the initial content
+  const parseInitialContent = () => {
+    if (!initialContent) return undefined
+    try {
+      return JSON.parse(initialContent)
+    } catch (error) {
+      console.error('Error parsing initial content:', error)
+      return undefined
+    }
+  }
+
   const editor = useCreateBlockNote({
-    initialContent: initialContent ? JSON.parse(initialContent) : undefined,
+    initialContent: parseInitialContent(),
   })
 
   const saveContent = async () => {
     if (!editor) return
 
     setIsSaving(true)
-    const content = JSON.stringify(editor.topLevelBlocks)
-    console.log('Saving content:', content)
-
     try {
+      // Get the content safely
+      const blocks = editor.topLevelBlocks
+      const content = JSON.stringify(blocks)
+
       if (documentId) {
         const { error } = await supabase
           .from('documents')
@@ -78,17 +90,12 @@ export const DocumentEditor = ({
     let timeoutId: NodeJS.Timeout
 
     const handleContentChange = () => {
-      // Clear any existing timeout
       if (timeoutId) clearTimeout(timeoutId)
-
-      // Set new timeout for debouncing
-      timeoutId = setTimeout(saveContent, 5000) // Autosave after 5 seconds of no changes
+      timeoutId = setTimeout(saveContent, 5000)
     }
 
-    // Subscribe to content changes
     editor.onEditorContentChange(handleContentChange)
 
-    // Cleanup
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
       editor.onEditorContentChange(null)
