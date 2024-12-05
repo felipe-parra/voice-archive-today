@@ -118,7 +118,7 @@ export const DocumentEditor = ({
             })
           ]}
           contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md text-foreground"
-          className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-accent [&_.toolbar]:border-primary/20 [&_.toolbar]:rounded-t-md [&_.toolbar]:p-2"
+          className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-accent [&_.toolbar]:border-primary/20 [&_.toolbar]:rounded-t-md [&_.toolbar]:p-2 [&_button]:!text-foreground [&_button:hover]:!bg-primary/20 [&_select]:!text-foreground [&_select]:!bg-accent [&_select]:!border-primary/20"
         />
       </div>
     </div>
