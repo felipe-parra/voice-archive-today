@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Play, Edit2 } from 'lucide-react'
+import { Play, Edit2, FileText } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -10,6 +10,8 @@ import {
 import { EditVoiceNoteForm } from './EditVoiceNoteForm'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 interface VoiceNote {
   id: string
@@ -29,17 +31,50 @@ interface VoiceNoteListProps {
 export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   const [selected, setSelected] = useState<VoiceNote | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const playRecording = (url: string) => {
     const audio = new Audio(url)
     audio.play()
   }
+
   const handleCloseSidebar = () => {
     setIsSidebarOpen(false)
     onUpdate()
-    console.log({ open, isSidebarOpen })
   }
+
+  const transcribeAudio = async (voiceNote: VoiceNote) => {
+    try {
+      setIsTranscribing(voiceNote.id)
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: {
+          audioUrl: voiceNote.audio_url,
+          voiceNoteId: voiceNote.id,
+        },
+      })
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'Audio transcribed successfully!',
+      })
+
+      onUpdate()
+    } catch (error) {
+      console.error('Error transcribing audio:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to transcribe audio. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsTranscribing(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {recordings.map((recording) => (
@@ -52,9 +87,6 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
             onClick={() => navigate(`/voice-note/${recording.id}`)}
           >
             <p className="text-primary">{recording.title}</p>
-            {/* <small className="text-xs text-slate-700 m-0 p-0">
-              {recording.id}
-            </small> */}
             {recording.description && (
               <p className="text-sm text-gray-500 mt-1">
                 {recording.description}
@@ -85,6 +117,17 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
             >
               <Play className="h-4 w-4" />
             </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => transcribeAudio(recording)}
+              disabled={isTranscribing === recording.id}
+            >
+              <FileText className={`h-4 w-4 ${isTranscribing === recording.id ? 'animate-pulse' : ''}`} />
+            </Button>
+
             <Sheet
               open={isSidebarOpen}
               onOpenChange={(open) => {
