@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
 import '@blocknote/core/style.css'
+import { BlockNoteSchema } from '@blocknote/core'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -34,6 +35,7 @@ export const DocumentEditor = ({
   }
 
   const editor = useCreateBlockNote({
+    schema: BlockNoteSchema.create(),
     initialContent: parseInitialContent(),
   })
 
@@ -42,8 +44,8 @@ export const DocumentEditor = ({
 
     setIsSaving(true)
     try {
-      // Get the content safely using the editor's API
-      const blocks = editor.getJSON()
+      // Get the content using the editor's API
+      const blocks = editor.topLevelBlocks
       const content = JSON.stringify(blocks)
 
       console.log('Saving content:', content) // Debug log
