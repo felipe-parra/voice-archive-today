@@ -87,7 +87,7 @@ const VoiceNoteDetail = () => {
             voiceNoteId={id || ''}
             onTranscriptCreated={updateVoiceNoteTranscript}
           />
-          
+
           {voiceNote?.transcript && (
             <SummarizeButton
               transcript={voiceNote.transcript}
