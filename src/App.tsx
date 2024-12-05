@@ -13,7 +13,7 @@ import CreatedBy from './components/CreatedBy'
 const queryClient = new QueryClient()
 
 const App = () => (
-  <main className="w-screen h-screen relative">
+  <main className="w-screen h-full relative">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
