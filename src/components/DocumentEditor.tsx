@@ -43,7 +43,7 @@ export const DocumentEditor = ({
     setIsSaving(true)
     try {
       // Get the content safely using the editor's API
-      const blocks = await editor.blocksToJSON()
+      const blocks = editor.getJSON()
       const content = JSON.stringify(blocks)
 
       console.log('Saving content:', content) // Debug log
