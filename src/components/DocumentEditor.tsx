@@ -18,6 +18,7 @@ import {
   Separator,
 } from '@mdxeditor/editor'
 import { DocumentActions } from './voice-note/DocumentActions'
+import { useQuery } from '@tanstack/react-query'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -34,8 +35,31 @@ export const DocumentEditor = ({
 }: DocumentEditorProps) => {
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
-  const [content, setContent] = useState(initialContent || '')
   const [markdownUrl, setMarkdownUrl] = useState<string | null>(null)
+
+  // Query for real-time document content
+  const { data: documentContent } = useQuery({
+    queryKey: ['documentContent', documentId],
+    queryFn: async () => {
+      if (!documentId) return initialContent || ''
+      const { data, error } = await supabase
+        .from('documents')
+        .select('content')
+        .eq('id', documentId)
+        .single()
+      
+      if (error) throw error
+      return data?.content || ''
+    },
+    initialData: initialContent || '',
+  })
+
+  const [content, setContent] = useState(documentContent)
+
+  // Update local content when document content changes
+  useEffect(() => {
+    setContent(documentContent)
+  }, [documentContent])
 
   const saveContent = async () => {
     setIsSaving(true)
