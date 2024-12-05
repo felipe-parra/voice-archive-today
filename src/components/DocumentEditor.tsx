@@ -42,9 +42,11 @@ export const DocumentEditor = ({
 
     setIsSaving(true)
     try {
-      // Get the content safely
-      const blocks = editor.topLevelBlocks
+      // Get the content safely using the editor's API
+      const blocks = await editor.blocksToJSON()
       const content = JSON.stringify(blocks)
+
+      console.log('Saving content:', content) // Debug log
 
       if (documentId) {
         const { error } = await supabase
