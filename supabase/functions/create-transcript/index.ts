@@ -15,6 +15,7 @@ serve(async (req) => {
 
   try {
     const { voiceNoteId } = await req.json()
+    console.log('Processing voice note:', voiceNoteId)
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -30,18 +31,35 @@ serve(async (req) => {
       .single()
 
     if (fetchError || !voiceNote) {
+      console.error('Voice note not found:', fetchError)
       throw new Error('Voice note not found')
     }
 
-    // Get the audio file URL
-    const { data: signedURL } = await supabaseClient
+    console.log('Found voice note:', voiceNote.id)
+
+    // Extract the file path from the audio_url
+    // The audio_url is typically in the format: 
+    // https://xxx.supabase.co/storage/v1/object/public/voice_notes/path/to/file.mp3
+    const audioPath = voiceNote.audio_url.split('/voice_notes/').pop()
+    if (!audioPath) {
+      console.error('Invalid audio URL format:', voiceNote.audio_url)
+      throw new Error('Invalid audio URL format')
+    }
+
+    console.log('Audio path:', audioPath)
+
+    // Get a signed URL for the file
+    const { data: signedURL, error: signedURLError } = await supabaseClient
       .storage
       .from('voice_notes')
-      .createSignedUrl(voiceNote.audio_url, 60)
+      .createSignedUrl(audioPath, 60)
 
-    if (!signedURL?.signedUrl) {
+    if (signedURLError || !signedURL?.signedUrl) {
+      console.error('Error creating signed URL:', signedURLError)
       throw new Error('Could not get audio file URL')
     }
+
+    console.log('Created signed URL successfully')
 
     // Create transcript using OpenAI
     const formData = new FormData()
@@ -49,6 +67,8 @@ serve(async (req) => {
     const audioBlob = await audioResponse.blob()
     formData.append('file', audioBlob, 'audio.mp3')
     formData.append('model', 'whisper-1')
+
+    console.log('Sending request to OpenAI')
 
     const openAIResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -59,10 +79,13 @@ serve(async (req) => {
     })
 
     if (!openAIResponse.ok) {
+      const error = await openAIResponse.text()
+      console.error('OpenAI API error:', error)
       throw new Error('Failed to create transcript')
     }
 
     const transcriptionResult = await openAIResponse.json()
+    console.log('Received transcript from OpenAI')
 
     // Update the voice note with the transcript
     const { error: updateError } = await supabaseClient
@@ -71,8 +94,11 @@ serve(async (req) => {
       .eq('id', voiceNoteId)
 
     if (updateError) {
+      console.error('Error updating voice note:', updateError)
       throw updateError
     }
+
+    console.log('Successfully updated voice note with transcript')
 
     return new Response(
       JSON.stringify({ transcript: transcriptionResult.text }),
