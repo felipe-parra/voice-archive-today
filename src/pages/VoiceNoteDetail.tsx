@@ -2,9 +2,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, Tags, FileText } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft } from "lucide-react";
 import { DocumentEditor } from "@/components/DocumentEditor";
+import { VoiceNoteMetadata } from "@/components/voice-note/VoiceNoteMetadata";
+import { AudioPlayer } from "@/components/voice-note/AudioPlayer";
+import { TranscriptDisplay } from "@/components/voice-note/TranscriptDisplay";
 
 const VoiceNoteDetail = () => {
   const { id } = useParams();
@@ -76,71 +78,17 @@ const VoiceNoteDetail = () => {
       </Button>
 
       <div className="mx-auto max-w-4xl space-y-8">
-        <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
-          <h1 className="text-3xl font-bold text-primary mb-4">
-            {voiceNote?.title}
-          </h1>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <div className="flex items-center text-gray-400">
-                <Calendar className="mr-2 h-4 w-4" />
-                {format(new Date(voiceNote?.created_at || new Date()), "PPP")}
-              </div>
-              
-              {voiceNote?.duration !== undefined && voiceNote.duration > 0 && (
-                <div className="flex items-center text-gray-400">
-                  <Clock className="mr-2 h-4 w-4" />
-                  {Math.floor(voiceNote.duration / 60)}:{(voiceNote.duration % 60).toString().padStart(2, '0')}
-                </div>
-              )}
+        <VoiceNoteMetadata
+          title={voiceNote?.title || ""}
+          createdAt={voiceNote?.created_at || new Date().toISOString()}
+          duration={voiceNote?.duration}
+          tags={voiceNote?.tags}
+          description={voiceNote?.description}
+        />
 
-              {voiceNote?.tags && voiceNote.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <Tags className="h-4 w-4 text-gray-400 mr-2" />
-                  {voiceNote.tags.map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+        <AudioPlayer audioUrl={voiceNote?.audio_url || ""} />
 
-            {voiceNote?.description && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-primary">Description</h3>
-                <p className="text-gray-300">{voiceNote.description}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {voiceNote?.audio_url && (
-          <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-primary mb-4">Audio</h3>
-            <audio
-              controls
-              className="w-full"
-              src={voiceNote.audio_url}
-            >
-              Your browser does not support the audio element.
-            </audio>
-          </div>
-        )}
-
-        {voiceNote?.transcript && (
-          <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
-            <div className="flex items-center mb-4">
-              <FileText className="mr-2 h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold text-primary">Transcript</h3>
-            </div>
-            <p className="text-gray-300 whitespace-pre-wrap">{voiceNote.transcript}</p>
-          </div>
-        )}
+        <TranscriptDisplay transcript={voiceNote?.transcript || ""} />
 
         {id && (
           <DocumentEditor
