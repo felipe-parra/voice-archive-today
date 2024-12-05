@@ -1,3 +1,5 @@
 project_id = "fdqgvjgcoidqwvemavaa"
 [functions.transcribe-audio]
 verify_jwt = true
+[functions.summarize-transcript]
+verify_jwt = true

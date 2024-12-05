@@ -9,12 +9,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { transcript } = await req.json();
+    console.log('Received transcript for summarization:', transcript.substring(0, 100) + '...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -27,18 +29,25 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful assistant that creates well-structured summaries of transcripts. Format the summary in markdown with proper headings and bullet points where appropriate.' 
+            content: 'You are a helpful assistant that creates concise, well-structured summaries. Format the summary in markdown with proper headings and bullet points.' 
           },
           { 
             role: 'user', 
-            content: `Please summarize this transcript and format it in markdown: ${transcript}` 
+            content: `Please summarize this transcript in a clear, organized way: ${transcript}` 
           }
         ],
       }),
     });
 
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('OpenAI API error:', error);
+      throw new Error('Failed to generate summary');
+    }
+
     const data = await response.json();
     const summary = data.choices[0].message.content;
+    console.log('Generated summary successfully');
 
     return new Response(JSON.stringify({ summary }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

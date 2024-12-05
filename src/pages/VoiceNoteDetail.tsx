@@ -98,21 +98,15 @@ const VoiceNoteDetail = () => {
 
     setIsSummarizing(true)
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-transcript`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ transcript: voiceNote.transcript }),
-        }
-      )
+      console.log('Calling summarize-transcript function...')
+      const { data, error } = await supabase.functions.invoke('summarize-transcript', {
+        body: { transcript: voiceNote.transcript }
+      })
 
-      if (!response.ok) throw new Error('Failed to summarize transcript')
+      if (error) throw error
 
-      const { summary } = await response.json()
+      console.log('Summary generated:', data)
+      const { summary } = data
 
       // Update the document content with the summary
       if (document?.id) {
