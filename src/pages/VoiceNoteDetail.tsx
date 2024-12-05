@@ -1,22 +1,32 @@
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { DocumentEditor } from '@/components/DocumentEditor'
 import { VoiceNoteMetadata } from '@/components/voice-note/VoiceNoteMetadata'
 import { AudioPlayer } from '@/components/voice-note/AudioPlayer'
 import { TranscriptDisplay } from '@/components/voice-note/TranscriptDisplay'
+import { SummarizeButton } from '@/components/voice-note/SummarizeButton'
+import { LoadingSpinner } from '@/components/voice-note/LoadingSpinner'
+import { NotFoundMessage } from '@/components/voice-note/NotFoundMessage'
 import { useToast } from '@/components/ui/use-toast'
-import { useEffect, useState } from 'react'
-import { VoiceNote } from '@/interfaces/voice.interface'
+import { supabase } from '@/integrations/supabase/client'
+import { useVoiceNoteData } from '@/hooks/useVoiceNoteData'
 
 const VoiceNoteDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [isSummarizing, setIsSummarizing] = useState(false)
+
+  const {
+    voiceNote,
+    document,
+    isLoadingVoiceNote,
+    isLoadingDocument,
+    voiceNoteError,
+    documentError,
+    updateVoiceNoteTranscript,
+  } = useVoiceNoteData(id)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -33,152 +43,24 @@ const VoiceNoteDetail = () => {
       }
     }
     checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate])
-
-  const {
-    data: voiceNote,
-    isLoading: isLoadingVoiceNote,
-    error: voiceNoteError,
-  } = useQuery({
-    queryKey: ['voiceNote', id],
-    queryFn: async () => {
-      if (!id) throw new Error('No voice note ID provided')
-
-      const { data, error } = await supabase
-        .from('voice_notes')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) {
-        console.error('Error fetching voice note:', error)
-        throw error
-      }
-      return data
-    },
-    enabled: !!id,
-  })
-
-  const {
-    data: document,
-    isLoading: isLoadingDocument,
-    error: documentError,
-  } = useQuery({
-    queryKey: ['document', id],
-    queryFn: async () => {
-      if (!id) throw new Error('No voice note ID provided')
-
-      console.log('Fetching document for voice note:', id)
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('voice_note_id', id)
-        .maybeSingle()
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching document:', error)
-        throw error
-      }
-      console.log('Document data:', data)
-      return data
-    },
-    enabled: !!id,
-  })
-
-  const handleTranscriptCreated = (newTranscript: string) => {
-    queryClient.setQueryData(['voiceNote', id], (oldData: VoiceNote) => ({
-      ...oldData,
-      transcript: newTranscript,
-    }))
-  }
-
-  const handleSummarize = async () => {
-    if (!voiceNote?.transcript) return
-
-    setIsSummarizing(true)
-    try {
-      console.log('Calling summarize-transcript function...')
-      const { data, error } = await supabase.functions.invoke('summarize-transcript', {
-        body: { transcript: voiceNote.transcript }
-      })
-
-      if (error) throw error
-
-      console.log('Summary generated:', data)
-      const { summary } = data
-
-      // Update the document content with the summary
-      if (document?.id) {
-        await supabase
-          .from('documents')
-          .update({ content: summary })
-          .eq('id', document.id)
-      } else {
-        await supabase.from('documents').insert({
-          content: summary,
-          voice_note_id: id,
-          title: voiceNote.title,
-        })
-      }
-
-      // Invalidate the document query to refresh the content
-      queryClient.invalidateQueries({ queryKey: ['document', id] })
-
-      toast({
-        title: 'Success',
-        description: 'Transcript has been summarized and added to the document',
-      })
-    } catch (error) {
-      console.error('Error summarizing transcript:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to summarize transcript',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSummarizing(false)
-    }
-  }
+  }, [navigate, toast])
 
   useEffect(() => {
-    if (voiceNoteError) {
+    if (voiceNoteError || documentError) {
       toast({
-        title: 'Error loading voice note',
-        description: 'Failed to load voice note details',
+        title: 'Error loading data',
+        description: 'Failed to load voice note or document details',
         variant: 'destructive',
       })
     }
-    if (documentError) {
-      toast({
-        title: 'Error loading document',
-        description: 'Failed to load document details',
-        variant: 'destructive',
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voiceNoteError, documentError])
+  }, [voiceNoteError, documentError, toast])
 
   if (isLoadingVoiceNote || isLoadingDocument) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full border-4 border-primary border-t-transparent h-12 w-12"></div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (!voiceNote && !isLoadingVoiceNote) {
-    return (
-      <div className="min-h-screen p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">Voice note not found</h2>
-          <Button variant="ghost" className="mt-4" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Go Back
-          </Button>
-        </div>
-      </div>
-    )
+    return <NotFoundMessage />
   }
 
   return (
@@ -203,19 +85,16 @@ const VoiceNoteDetail = () => {
           <TranscriptDisplay
             transcript={voiceNote?.transcript || ''}
             voiceNoteId={id || ''}
-            onTranscriptCreated={handleTranscriptCreated}
+            onTranscriptCreated={updateVoiceNoteTranscript}
           />
           
           {voiceNote?.transcript && (
-            <Button
-              variant="secondary"
-              onClick={handleSummarize}
-              disabled={isSummarizing}
-              className="w-full"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              {isSummarizing ? 'Summarizing...' : 'Summarize Transcript'}
-            </Button>
+            <SummarizeButton
+              transcript={voiceNote.transcript}
+              documentId={document?.id}
+              voiceNoteId={id || ''}
+              title={voiceNote.title || ''}
+            />
           )}
         </div>
 
