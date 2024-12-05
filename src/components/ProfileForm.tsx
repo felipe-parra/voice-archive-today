@@ -1,3 +1,4 @@
+import React, { useState } from 'react'; // Add React and useState import
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -45,7 +46,7 @@ type ProfileFormProps = {
 
 export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // Existing useState hook
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
