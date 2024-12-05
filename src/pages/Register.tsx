@@ -1,32 +1,36 @@
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Auth } from '@supabase/auth-ui-react'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
+import { supabase } from '@/integrations/supabase/client'
+import { useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 
 const Register = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (session) {
-        navigate("/");
+        navigate('/')
       }
-    };
+    }
 
-    checkSession();
+    checkSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate("/");
+        navigate('/')
       }
-    });
+    })
 
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+      subscription.unsubscribe()
+    }
+  }, [navigate])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-accent p-4">
@@ -38,19 +42,21 @@ const Register = () => {
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
-          theme="light"
+          theme="dark"
           providers={[]}
           view="sign_up"
         />
         <div className="text-center text-sm">
-          <span className="text-muted-foreground">Already have an account? </span>
+          <span className="text-muted-foreground">
+            Already have an account?{' '}
+          </span>
           <Link to="/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Register;
+export default Register
