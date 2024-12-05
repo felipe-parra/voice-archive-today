@@ -37,7 +37,7 @@
   --bn-colors-editor-text: #ffffff;
   --bn-colors-editor-background: transparent;
   --bn-colors-menu-text: #ffffff;
-  --bn-colors-menu-background: #1A1F2C;
+  --bn-colors-menu-background: #1a1f2c;
   --bn-colors-tooltip-text: #ffffff;
   --bn-colors-tooltip-background: #2a2f3c;
   --bn-colors-hovered-text: #ffffff;
@@ -50,4 +50,15 @@
   --bn-colors-border: #3a3f4c;
   --bn-colors-side-menu: #2a2f3c;
   --bn-font-family: 'Inter', sans-serif;
+}
+
+[role='toolbar'] {
+  background: black;
+}
+[role='toolbar'] button[role='combobox'] span {
+  color: black !important;
+}
+
+[role='toolbar'] > * {
+  color: black !important;
 }
