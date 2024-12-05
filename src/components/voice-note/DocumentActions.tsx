@@ -58,7 +58,7 @@ export const DocumentActions = ({ documentId, markdownUrl }: DocumentActionsProp
         body: {
           documentId,
           to: email,
-          from: 'notifications@yourdomain.com', // Replace with your verified Resend domain
+          from: 'notifications@xilo.pro',
         },
       })
 

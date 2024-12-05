@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "VoiceNote <notifications@resend.dev>", // Use a verified Resend domain
+        from: "VoiceNote <notifications@xilo.pro>", // Using your domain
         to: [emailRequest.to],
         subject: `Markdown Document: ${document.title || 'Untitled'}`,
         html: `<p>Here's your markdown document:</p><pre>${document.content}</pre>`,
@@ -75,15 +75,13 @@ const handler = async (req: Request): Promise<Response> => {
     })
   } catch (error: any) {
     console.error("Error in send-markdown-email function:", error)
-    return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.toString()
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    )
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.toString()
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
   }
 }
 
