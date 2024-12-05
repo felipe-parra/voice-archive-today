@@ -2,9 +2,9 @@ import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,25 +20,19 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-accent p-4">
       <div className="w-full max-w-md space-y-8 bg-background/80 backdrop-blur-sm p-8 rounded-lg shadow-xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-primary">Welcome Back</h2>
-          <p className="mt-2 text-muted-foreground">Please sign in to continue</p>
+          <h2 className="text-3xl font-bold text-primary">Create an Account</h2>
+          <p className="mt-2 text-muted-foreground">Sign up to get started</p>
         </div>
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
           theme="light"
           providers={[]}
-          view="sign_in"
+          view="sign_up"
         />
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account? </span>
-          <Link to="/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </div>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default Register;
