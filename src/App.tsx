@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Account from "./pages/Account";
 import VoiceNoteDetail from "./pages/VoiceNoteDetail";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Index />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/voice-note/:id" element={<VoiceNoteDetail />} />
         </Routes>
       </BrowserRouter>

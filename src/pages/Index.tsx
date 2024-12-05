@@ -3,8 +3,14 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -39,7 +45,6 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Unexpected error during logout:', error);
-      // Even if there's an error, redirect to login for safety
       navigate("/login");
       toast({
         title: "Notice",
@@ -49,15 +54,24 @@ const Index = () => {
   };
 
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-4"
-        onClick={handleLogout}
-      >
-        <LogOut className="h-5 w-5" />
-      </Button>
+    <div className="relative min-h-screen">
+      <div className="absolute top-4 right-4 z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+              <UserRound className="h-6 w-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate("/account")}>
+              Account
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <VoiceNote />
     </div>
   );
