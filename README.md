@@ -2,6 +2,11 @@
 
 An amazing app to record your voice, transcribe it to text, and even summarize the results!
 
+<div>
+  <img src="https://github.com/user-attachments/assets/1f229df0-7f08-4acd-9023-2f7e93b793c8" height="400px" />
+  <img src="https://github.com/user-attachments/assets/f191e5ac-f64c-4144-8763-3c82cb49e8e0" height="400px" />
+</div>
+
 ## 🚀 Features
 
 - Voice Recording: Capture high-quality audio recordings effortlessly.
