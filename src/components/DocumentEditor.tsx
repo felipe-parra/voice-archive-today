@@ -1,84 +1,86 @@
-import { useEffect } from "react";
-import { BlockNoteEditor } from "@blocknote/core";
-import { BlockNoteView, useBlockNote } from "@blocknote/react";
-import "@blocknote/core/style.css";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from 'react'
+import { BlockNoteView, useCreateBlockNote } from '@blocknote/react'
+import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/integrations/supabase/client'
+import '@blocknote/core/style.css'
 
 interface DocumentEditorProps {
-  initialContent?: string;
-  documentId?: string;
-  voiceNoteId: string;
-  title: string;
+  initialContent?: string
+  documentId?: string
+  voiceNoteId: string
+  title: string
 }
 
-export const DocumentEditor = ({ initialContent, documentId, voiceNoteId, title }: DocumentEditorProps) => {
-  const { toast } = useToast();
-  
-  const editor: BlockNoteEditor = useBlockNote({
+export const DocumentEditor = ({
+  initialContent,
+  documentId,
+  voiceNoteId,
+  title,
+}: DocumentEditorProps) => {
+  const { toast } = useToast()
+
+  const editor = useCreateBlockNote({
     initialContent: initialContent ? JSON.parse(initialContent) : undefined,
-  });
+  })
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) return
 
-    let timeoutId: NodeJS.Timeout;
-    
+    let timeoutId: NodeJS.Timeout
+
     const saveContent = async () => {
-      const content = JSON.stringify(editor.toJSON());
-      console.log("Saving content:", content);
-      
+      const content = JSON.stringify(editor.topLevelBlocks)
+      console.log('Saving content:', content)
+
       try {
         if (documentId) {
           const { error } = await supabase
-            .from("documents")
+            .from('documents')
             .update({ content })
-            .eq("id", documentId);
-          
-          if (error) throw error;
+            .eq('id', documentId)
+
+          if (error) throw error
         } else {
-          const { error } = await supabase
-            .from("documents")
-            .insert({
-              content,
-              voice_note_id: voiceNoteId,
-              title
-            });
-          
-          if (error) throw error;
+          const { error } = await supabase.from('documents').insert({
+            content,
+            voice_note_id: voiceNoteId,
+            title,
+          })
+
+          if (error) throw error
         }
       } catch (error) {
-        console.error("Error saving document:", error);
+        console.error('Error saving document:', error)
         toast({
-          title: "Error",
-          description: "Failed to save document",
-          variant: "destructive",
-        });
+          title: 'Error',
+          description: 'Failed to save document',
+          variant: 'destructive',
+        })
       }
-    };
+    }
 
     const handleContentChange = () => {
       // Clear any existing timeout
-      if (timeoutId) clearTimeout(timeoutId);
-      
+      if (timeoutId) clearTimeout(timeoutId)
+
       // Set new timeout for debouncing
-      timeoutId = setTimeout(saveContent, 1000);
-    };
+      timeoutId = setTimeout(saveContent, 1000)
+    }
 
     // Subscribe to content changes
-    editor.onEditorContentChange(handleContentChange);
+    editor.onEditorContentChange(handleContentChange)
 
     // Cleanup
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      editor.onEditorContentChange(null);
-    };
-  }, [editor, documentId, voiceNoteId, title, toast]);
+      if (timeoutId) clearTimeout(timeoutId)
+      editor.onEditorContentChange(null)
+    }
+  }, [editor, documentId, voiceNoteId, title, toast])
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
       <h3 className="text-lg font-semibold text-primary mb-4">Document</h3>
       <BlockNoteView editor={editor} theme="dark" />
     </div>
-  );
-};
+  )
+}
