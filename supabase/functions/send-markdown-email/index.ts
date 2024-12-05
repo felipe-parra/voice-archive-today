@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: emailRequest.from,
+        from: "VoiceNote <notifications@resend.dev>", // Use a verified Resend domain
         to: [emailRequest.to],
         subject: `Markdown Document: ${document.title || 'Untitled'}`,
         html: `<p>Here's your markdown document:</p><pre>${document.content}</pre>`,
