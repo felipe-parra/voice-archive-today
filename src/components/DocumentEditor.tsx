@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { BlockNoteView, useCreateBlockNote } from '@blocknote/react'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
-import '@blocknote/core/style.css'
-import { BlockNoteSchema } from '@blocknote/core'
+import '@mdxeditor/editor/style.css'
+import { MDXEditor, headingsPlugin, listsPlugin, quotePlugin, thematicBreakPlugin, markdownShortcutPlugin, toolbarPlugin, UndoRedo, BoldItalicUnderlineToggles, BlockTypeSelect } from '@mdxeditor/editor'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -22,60 +21,56 @@ export const DocumentEditor = ({
 }: DocumentEditorProps) => {
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
-
-  // Safely parse the initial content
-  const parseInitialContent = () => {
-    if (!initialContent) return undefined
-    try {
-      return JSON.parse(initialContent)
-    } catch (error) {
-      console.error('Error parsing initial content:', error)
-      return undefined
-    }
-  }
-
-  const editor = useCreateBlockNote({
-    schema: BlockNoteSchema.create(),
-    initialContent: parseInitialContent(),
-  })
+  const [content, setContent] = useState(initialContent || '')
 
   const saveContent = async () => {
-    if (!editor) return
-
     setIsSaving(true)
     try {
-      // Get the content using the editor's API
-      const blocks = editor.topLevelBlocks
-      const content = JSON.stringify(blocks)
+      // Create a Blob from the markdown content
+      const blob = new Blob([content], { type: 'text/markdown' })
+      const file = new File([blob], `${title}.md`, { type: 'text/markdown' })
+      
+      // Upload to storage
+      const userId = (await supabase.auth.getUser()).data.user?.id
+      if (!userId) throw new Error('User not authenticated')
+      
+      const filePath = `${userId}/${voiceNoteId}/${file.name}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('markdown_files')
+        .upload(filePath, file, { upsert: true })
 
-      console.log('Saving content:', content) // Debug log
+      if (uploadError) throw uploadError
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('markdown_files')
+        .getPublicUrl(filePath)
 
       if (documentId) {
         const { error } = await supabase
           .from('documents')
-          .update({ content })
+          .update({ 
+            content,
+            markdown_url: publicUrl
+          })
           .eq('id', documentId)
 
         if (error) throw error
-
-        toast({
-          title: 'Success',
-          description: 'Document saved successfully',
-        })
       } else {
         const { error } = await supabase.from('documents').insert({
           content,
+          markdown_url: publicUrl,
           voice_note_id: voiceNoteId,
           title,
         })
 
         if (error) throw error
-
-        toast({
-          title: 'Success',
-          description: 'Document created successfully',
-        })
       }
+
+      toast({
+        title: 'Success',
+        description: documentId ? 'Document saved successfully' : 'Document created successfully',
+      })
     } catch (error) {
       console.error('Error saving document:', error)
       toast({
@@ -87,25 +82,6 @@ export const DocumentEditor = ({
       setIsSaving(false)
     }
   }
-
-  // useEffect(() => {
-  //   if (!editor) return
-
-  //   let timeoutId: NodeJS.Timeout
-
-  //   const handleContentChange = () => {
-  //     if (timeoutId) clearTimeout(timeoutId)
-  //     timeoutId = setTimeout(saveContent, 5000)
-  //   }
-
-  //   editor.onEditorContentChange(handleContentChange)
-
-  //   return () => {
-  //     if (timeoutId) clearTimeout(timeoutId)
-  //     editor.onEditorContentChange(null)
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [editor, documentId, voiceNoteId, title])
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
@@ -121,8 +97,28 @@ export const DocumentEditor = ({
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </div>
-      <div className="block-note-view-container">
-        <BlockNoteView editor={editor} theme="dark" />
+      <div className="prose prose-invert max-w-none">
+        <MDXEditor
+          markdown={content}
+          onChange={setContent}
+          plugins={[
+            headingsPlugin(),
+            listsPlugin(),
+            quotePlugin(),
+            thematicBreakPlugin(),
+            markdownShortcutPlugin(),
+            toolbarPlugin({
+              toolbarContents: () => (
+                <>
+                  <UndoRedo />
+                  <BoldItalicUnderlineToggles />
+                  <BlockTypeSelect />
+                </>
+              )
+            })
+          ]}
+          contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md"
+        />
       </div>
     </div>
   )

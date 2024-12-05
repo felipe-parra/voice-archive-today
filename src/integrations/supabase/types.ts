@@ -14,6 +14,7 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          markdown_url: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -23,6 +24,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          markdown_url?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -32,6 +34,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          markdown_url?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
