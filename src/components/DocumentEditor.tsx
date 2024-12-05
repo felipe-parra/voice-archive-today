@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
 import '@mdxeditor/editor/style.css'
 import { MDXEditor, headingsPlugin, listsPlugin, quotePlugin, thematicBreakPlugin, markdownShortcutPlugin, toolbarPlugin, UndoRedo, BoldItalicUnderlineToggles, BlockTypeSelect } from '@mdxeditor/editor'
+import { DocumentActions } from './voice-note/DocumentActions'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -22,6 +23,7 @@ export const DocumentEditor = ({
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
   const [content, setContent] = useState(initialContent || '')
+  const [markdownUrl, setMarkdownUrl] = useState<string | null>(null)
 
   const saveContent = async () => {
     setIsSaving(true)
@@ -45,6 +47,8 @@ export const DocumentEditor = ({
       const { data: { publicUrl } } = supabase.storage
         .from('markdown_files')
         .getPublicUrl(filePath)
+
+      setMarkdownUrl(publicUrl)
 
       if (documentId) {
         const { error } = await supabase
@@ -82,6 +86,24 @@ export const DocumentEditor = ({
       setIsSaving(false)
     }
   }
+
+  useEffect(() => {
+    const fetchMarkdownUrl = async () => {
+      if (documentId) {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('markdown_url')
+          .eq('id', documentId)
+          .single()
+
+        if (!error && data) {
+          setMarkdownUrl(data.markdown_url)
+        }
+      }
+    }
+
+    fetchMarkdownUrl()
+  }, [documentId])
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
@@ -121,6 +143,7 @@ export const DocumentEditor = ({
           className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-accent [&_.toolbar]:border-primary/20 [&_.toolbar]:rounded-t-md [&_.toolbar]:p-2 [&_button]:!text-foreground [&_button:hover]:!bg-primary/20 [&_select]:!text-foreground [&_select]:!bg-accent [&_select]:!border-primary/20"
         />
       </div>
+      <DocumentActions documentId={documentId} markdownUrl={markdownUrl} />
     </div>
   )
 }
