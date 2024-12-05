@@ -47,6 +47,33 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          birthdate: string | null
+          full_name: string | null
+          gender: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          birthdate?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          birthdate?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       transcripts: {
         Row: {
           created_at: string
