@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { List } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { RecordingControls } from './RecordingControls'
 import { VoiceNoteList } from './VoiceNoteList'
@@ -24,6 +23,7 @@ export const VoiceNote = () => {
 
   React.useEffect(() => {
     loadRecordings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadRecordings = async () => {
