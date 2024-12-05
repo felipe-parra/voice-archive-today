@@ -31,42 +31,20 @@ const Index = () => {
 
   const handleLogout = async () => {
     try {
-      // First check if we have a session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        // If no session, just redirect to login
-        navigate("/login");
-        return;
-      }
-
-      // Attempt to sign out
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Logout error:', error);
-        // If we get a session_not_found error, we can safely redirect to login
-        if (error.message.includes('session_not_found')) {
-          navigate("/login");
-          return;
-        }
-        
-        toast({
-          title: "Error",
-          description: "Failed to sign out. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Signed out successfully",
-        });
-        navigate("/login");
-      }
+      await supabase.auth.signOut();
+      navigate("/login");
+      toast({
+        title: "Success",
+        description: "Signed out successfully",
+      });
     } catch (error) {
       console.error('Unexpected error during logout:', error);
-      // In case of any unexpected error, redirect to login
+      // Even if there's an error, redirect to login for safety
       navigate("/login");
+      toast({
+        title: "Notice",
+        description: "You have been signed out.",
+      });
     }
   };
 
