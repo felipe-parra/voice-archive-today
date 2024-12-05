@@ -117,7 +117,8 @@ export const DocumentEditor = ({
               )
             })
           ]}
-          contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md"
+          contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md text-foreground"
+          className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-background/50 [&_.toolbar]:border-primary/20"
         />
       </div>
     </div>
