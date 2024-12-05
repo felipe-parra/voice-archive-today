@@ -20,12 +20,12 @@ const queryClient = new QueryClient({
 })
 
 const App = () => (
-  <main className="w-screen h-full relative">
-    <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+        <main className="w-screen h-full relative">
+          <Toaster />
+          <Sonner />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -34,11 +34,11 @@ const App = () => (
             <Route path="/voice-note/:id" element={<VoiceNoteDetail />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
+          <CreatedBy />
+        </main>
       </TooltipProvider>
-    </QueryClientProvider>
-    <CreatedBy />
-  </main>
+    </BrowserRouter>
+  </QueryClientProvider>
 )
 
 export default App
