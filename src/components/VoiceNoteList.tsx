@@ -21,16 +21,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
-
-interface VoiceNote {
-  id: string
-  title: string
-  audio_url: string
-  created_at: string
-  description?: string
-  tags?: string[]
-  transcript?: string
-}
+import { VoiceNote } from '@/interfaces/voice.interface'
 
 interface VoiceNoteListProps {
   recordings: VoiceNote[]
@@ -42,7 +33,9 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [recordingToDelete, setRecordingToDelete] = useState<VoiceNote | null>(null)
+  const [recordingToDelete, setRecordingToDelete] = useState<VoiceNote | null>(
+    null
+  )
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -85,12 +78,15 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   const transcribeAudio = async (voiceNote: VoiceNote) => {
     try {
       setIsTranscribing(voiceNote.id)
-      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-        body: {
-          audioUrl: voiceNote.audio_url,
-          voiceNoteId: voiceNote.id,
-        },
-      })
+      const { data, error } = await supabase.functions.invoke(
+        'transcribe-audio',
+        {
+          body: {
+            audioUrl: voiceNote.audio_url,
+            voiceNoteId: voiceNote.id,
+          },
+        }
+      )
 
       if (error) throw error
 
@@ -158,11 +154,7 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
             {recording.transcript ? (
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8">
                     <FileText className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -183,7 +175,11 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
                 onClick={() => transcribeAudio(recording)}
                 disabled={isTranscribing === recording.id}
               >
-                <FileText className={`h-4 w-4 ${isTranscribing === recording.id ? 'animate-pulse' : ''}`} />
+                <FileText
+                  className={`h-4 w-4 ${
+                    isTranscribing === recording.id ? 'animate-pulse' : ''
+                  }`}
+                />
               </Button>
             )}
 
@@ -245,7 +241,8 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
           <DialogHeader>
             <DialogTitle>Delete Voice Note</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this voice note? This action cannot be undone.
+              Are you sure you want to delete this voice note? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -260,7 +257,9 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => recordingToDelete && handleDelete(recordingToDelete)}
+              onClick={() =>
+                recordingToDelete && handleDelete(recordingToDelete)
+              }
             >
               Delete
             </Button>
