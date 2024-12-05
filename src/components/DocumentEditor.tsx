@@ -4,7 +4,19 @@ import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
 import '@mdxeditor/editor/style.css'
-import { MDXEditor, headingsPlugin, listsPlugin, quotePlugin, thematicBreakPlugin, markdownShortcutPlugin, toolbarPlugin, UndoRedo, BoldItalicUnderlineToggles, BlockTypeSelect } from '@mdxeditor/editor'
+import {
+  MDXEditor,
+  headingsPlugin,
+  listsPlugin,
+  quotePlugin,
+  thematicBreakPlugin,
+  markdownShortcutPlugin,
+  toolbarPlugin,
+  UndoRedo,
+  BoldItalicUnderlineToggles,
+  BlockTypeSelect,
+  Separator,
+} from '@mdxeditor/editor'
 import { DocumentActions } from './voice-note/DocumentActions'
 
 interface DocumentEditorProps {
@@ -31,11 +43,11 @@ export const DocumentEditor = ({
       // Create a Blob from the markdown content
       const blob = new Blob([content], { type: 'text/markdown' })
       const file = new File([blob], `${title}.md`, { type: 'text/markdown' })
-      
+
       // Upload to storage
       const userId = (await supabase.auth.getUser()).data.user?.id
       if (!userId) throw new Error('User not authenticated')
-      
+
       const filePath = `${userId}/${voiceNoteId}/${file.name}`
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('markdown_files')
@@ -44,18 +56,18 @@ export const DocumentEditor = ({
       if (uploadError) throw uploadError
 
       // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('markdown_files')
-        .getPublicUrl(filePath)
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('markdown_files').getPublicUrl(filePath)
 
       setMarkdownUrl(publicUrl)
 
       if (documentId) {
         const { error } = await supabase
           .from('documents')
-          .update({ 
+          .update({
             content,
-            markdown_url: publicUrl
+            markdown_url: publicUrl,
           })
           .eq('id', documentId)
 
@@ -73,7 +85,9 @@ export const DocumentEditor = ({
 
       toast({
         title: 'Success',
-        description: documentId ? 'Document saved successfully' : 'Document created successfully',
+        description: documentId
+          ? 'Document saved successfully'
+          : 'Document created successfully',
       })
     } catch (error) {
       console.error('Error saving document:', error)
@@ -132,12 +146,14 @@ export const DocumentEditor = ({
             toolbarPlugin({
               toolbarContents: () => (
                 <>
+                  {' '}
                   <UndoRedo />
                   <BoldItalicUnderlineToggles />
+                  <Separator />
                   <BlockTypeSelect />
                 </>
-              )
-            })
+              ),
+            }),
           ]}
           contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md text-foreground"
           className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-accent [&_.toolbar]:border-primary/20 [&_.toolbar]:rounded-t-md [&_.toolbar]:p-2 [&_button]:!text-foreground [&_button:hover]:!bg-primary/20 [&_select]:!text-foreground [&_select]:!bg-accent [&_select]:!border-primary/20"
