@@ -1,5 +1,7 @@
 # 🎙️ Voice Recorder & Transcriber
 
+An amazing app to record your voice, transcribe it to text, and even summarize the results!
+
 ## 🚀 Features
 
 - Voice Recording: Capture high-quality audio recordings effortlessly.
