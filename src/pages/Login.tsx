@@ -17,9 +17,11 @@ const Login = () => {
         
         if (error) {
           console.error("Session check error:", error);
+          // Clear any existing session data
+          await supabase.auth.signOut();
           toast({
-            title: "Error",
-            description: "Failed to check authentication status",
+            title: "Session Error",
+            description: "Please sign in again",
             variant: "destructive",
           });
           return;
@@ -30,6 +32,8 @@ const Login = () => {
         }
       } catch (error) {
         console.error("Unexpected error during session check:", error);
+        // Clear any existing session data
+        await supabase.auth.signOut();
       } finally {
         setIsLoading(false);
       }
@@ -37,9 +41,15 @@ const Login = () => {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session);
+      
+      if (event === 'SIGNED_IN' && session) {
         navigate("/");
+      } else if (event === 'SIGNED_OUT') {
+        // Clear any existing session data
+        await supabase.auth.signOut();
+        setIsLoading(false);
       }
     });
 
