@@ -91,13 +91,13 @@ export const RecordingControls = ({ onRecordingComplete }: RecordingControlsProp
         <div className="audio-visualizer animate-pulse" />
       )}
       
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col-reverse items-center gap-4">
         <AudioFileUpload onUploadComplete={onRecordingComplete} />
         
         <Button
           onClick={isRecording ? stopRecording : startRecording}
           disabled={isLoading}
-          className={`bubble h-16 w-16 ${isRecording ? "animate-pulse glow" : ""}`}
+          className={`bubble h-16 w-16 ${isRecording ? "glow" : ""}`}
         >
           {isLoading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -108,14 +108,14 @@ export const RecordingControls = ({ onRecordingComplete }: RecordingControlsProp
           )}
         </Button>
 
-        <Button
+        {/* <Button
           variant="outline"
           onClick={() => navigate("/voice-note/new")}
           className="flex items-center gap-2"
         >
           <FileText className="h-4 w-4" />
           Create Document
-        </Button>
+        </Button> */}
       </div>
       
       {isRecording && (
