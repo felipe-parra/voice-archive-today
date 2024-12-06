@@ -1,13 +1,13 @@
-import React from 'react';
-import { Calendar, Clock, Tags } from 'lucide-react';
-import { format } from 'date-fns';
+import React from 'react'
+import { Calendar, Clock, Tags } from 'lucide-react'
+import { format } from 'date-fns'
 
 interface VoiceNoteMetadataProps {
-  title: string;
-  createdAt: string;
-  duration?: number;
-  tags?: string[];
-  description?: string;
+  title: string
+  createdAt: string
+  duration?: number
+  tags?: string[]
+  description?: string
 }
 
 export const VoiceNoteMetadata = ({
@@ -20,18 +20,19 @@ export const VoiceNoteMetadata = ({
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
       <h1 className="text-3xl font-bold text-primary mb-4">{title}</h1>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
           <div className="flex items-center text-gray-400">
             <Calendar className="mr-2 h-4 w-4" />
-            {format(new Date(createdAt), "PPP")}
+            {format(new Date(createdAt), 'PPP')}
           </div>
-          
+
           {duration !== undefined && duration > 0 && (
             <div className="flex items-center text-gray-400">
               <Clock className="mr-2 h-4 w-4" />
-              {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
+              {Math.floor(duration / 60)}:
+              {(duration % 60).toString().padStart(2, '0')}
             </div>
           )}
 
@@ -58,5 +59,5 @@ export const VoiceNoteMetadata = ({
         )}
       </div>
     </div>
-  );
-};
+  )
+}
