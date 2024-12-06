@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Download, Mail } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
@@ -12,7 +18,10 @@ interface DocumentActionsProps {
   markdownUrl?: string | null
 }
 
-export const DocumentActions = ({ documentId, markdownUrl }: DocumentActionsProps) => {
+export const DocumentActions = ({
+  documentId,
+  markdownUrl,
+}: DocumentActionsProps) => {
   const [email, setEmail] = useState('')
   const [isSending, setIsSending] = useState(false)
   const { toast } = useToast()
@@ -51,7 +60,9 @@ export const DocumentActions = ({ documentId, markdownUrl }: DocumentActionsProp
 
     try {
       setIsSending(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase.functions.invoke('send-markdown-email', {
