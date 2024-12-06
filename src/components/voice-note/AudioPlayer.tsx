@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 
 interface AudioPlayerProps {
-  audioUrl: string;
+  audioUrl: string
 }
 
 export const AudioPlayer = ({ audioUrl }: AudioPlayerProps) => {
-  if (!audioUrl) return null;
+  if (!audioUrl) return null
 
   return (
     <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
@@ -14,5 +14,5 @@ export const AudioPlayer = ({ audioUrl }: AudioPlayerProps) => {
         Your browser does not support the audio element.
       </audio>
     </div>
-  );
-};
+  )
+}
