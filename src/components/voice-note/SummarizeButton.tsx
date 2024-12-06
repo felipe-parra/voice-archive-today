@@ -26,9 +26,12 @@ export const SummarizeButton = ({
     setIsSummarizing(true)
     try {
       console.log('Calling summarize-transcript function...')
-      const { data, error } = await supabase.functions.invoke('summarize-transcript', {
-        body: { transcript }
-      })
+      const { data, error } = await supabase.functions.invoke(
+        'summarize-transcript',
+        {
+          body: { transcript },
+        }
+      )
 
       if (error) throw error
 
@@ -40,23 +43,25 @@ export const SummarizeButton = ({
           .from('documents')
           .update({ content: summary })
           .eq('id', documentId)
-        
+
         if (updateError) throw updateError
       } else {
-        const { error: insertError } = await supabase
-          .from('documents')
-          .insert({
-            content: summary,
-            voice_note_id: voiceNoteId,
-            title,
-          })
-        
+        const { error: insertError } = await supabase.from('documents').insert({
+          content: summary,
+          voice_note_id: voiceNoteId,
+          title,
+        })
+
         if (insertError) throw insertError
       }
 
       // Invalidate both the document query and the specific document content
-      await queryClient.invalidateQueries({ queryKey: ['document', voiceNoteId] })
-      await queryClient.invalidateQueries({ queryKey: ['documentContent', documentId] })
+      await queryClient.invalidateQueries({
+        queryKey: ['document', voiceNoteId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['documentContent', documentId],
+      })
 
       toast({
         title: 'Success',
