@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 export const NotFoundMessage = () => {
   const navigate = useNavigate()
-  
+
   return (
     <div className="min-h-screen p-4">
       <div className="text-center">
