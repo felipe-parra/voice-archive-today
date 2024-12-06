@@ -1,51 +1,54 @@
-import React from 'react';
-import { FileText, Speech } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import React from 'react'
+import { FileText, Speech } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 
 interface TranscriptDisplayProps {
-  transcript: string;
-  voiceNoteId: string;
-  onTranscriptCreated?: (transcript: string) => void;
+  transcript: string
+  voiceNoteId: string
+  onTranscriptCreated?: (transcript: string) => void
 }
 
-export const TranscriptDisplay = ({ 
-  transcript, 
+export const TranscriptDisplay = ({
+  transcript,
   voiceNoteId,
-  onTranscriptCreated 
+  onTranscriptCreated,
 }: TranscriptDisplayProps) => {
-  const { toast } = useToast();
-  const [isCreating, setIsCreating] = React.useState(false);
+  const { toast } = useToast()
+  const [isCreating, setIsCreating] = React.useState(false)
 
   const createTranscript = async () => {
     try {
-      setIsCreating(true);
-      
-      const { data, error } = await supabase.functions.invoke('create-transcript', {
-        body: { voiceNoteId }
-      });
+      setIsCreating(true)
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke(
+        'create-transcript',
+        {
+          body: { voiceNoteId },
+        }
+      )
+
+      if (error) throw error
 
       if (data.transcript) {
-        onTranscriptCreated?.(data.transcript);
+        onTranscriptCreated?.(data.transcript)
         toast({
-          title: "Success",
-          description: "Transcript created successfully",
-        });
+          title: 'Success',
+          description: 'Transcript created successfully',
+        })
       }
     } catch (error) {
-      console.error('Error creating transcript:', error);
+      console.error('Error creating transcript:', error)
       toast({
-        title: "Error",
-        description: "Failed to create transcript. Please try again.",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: 'Failed to create transcript. Please try again.',
+        variant: 'destructive',
+      })
     } finally {
-      setIsCreating(false);
+      setIsCreating(false)
     }
-  };
+  }
 
   if (!transcript) {
     return (
@@ -62,12 +65,12 @@ export const TranscriptDisplay = ({
             className="flex items-center gap-2"
           >
             <Speech className="h-4 w-4" />
-            {isCreating ? "Creating..." : "Create Transcript"}
+            {isCreating ? 'Creating...' : 'Create Transcript'}
           </Button>
         </div>
         <p className="text-gray-400 italic">No transcript available</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -78,5 +81,5 @@ export const TranscriptDisplay = ({
       </div>
       <p className="text-gray-300 whitespace-pre-wrap">{transcript}</p>
     </div>
-  );
-};
+  )
+}
