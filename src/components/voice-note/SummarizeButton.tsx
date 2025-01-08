@@ -39,6 +39,7 @@ export const SummarizeButton = ({
       const { summary } = data
 
       if (documentId) {
+        console.log('Updating existing document:', documentId)
         const { error: updateError } = await supabase
           .from('documents')
           .update({ content: summary })
@@ -46,6 +47,7 @@ export const SummarizeButton = ({
 
         if (updateError) throw updateError
       } else {
+        console.log('Creating new document for voice note:', voiceNoteId)
         const { error: insertError } = await supabase.from('documents').insert({
           content: summary,
           voice_note_id: voiceNoteId,
@@ -55,13 +57,15 @@ export const SummarizeButton = ({
         if (insertError) throw insertError
       }
 
-      // Invalidate both the document query and the specific document content
-      await queryClient.invalidateQueries({
-        queryKey: ['document', voiceNoteId],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ['documentContent', documentId],
-      })
+      // Invalidate both queries to ensure UI updates
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['document', voiceNoteId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['documentContent', documentId],
+        }),
+      ])
 
       toast({
         title: 'Success',
