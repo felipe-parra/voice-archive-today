@@ -58,9 +58,11 @@ serve(async (req) => {
     }
 
     console.log('Successfully downloaded audio file')
+    console.log('Audio file type:', audioData.type) // Log the file type
 
     // Create form data for OpenAI
     const formData = new FormData()
+    // Ensure we're sending the file with the correct MIME type
     formData.append('file', audioData, 'audio.webm')
     formData.append('model', 'whisper-1')
 
