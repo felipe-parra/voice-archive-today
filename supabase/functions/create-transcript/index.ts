@@ -1,6 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,69 +14,109 @@ serve(async (req) => {
   }
 
   try {
-    const { voiceNoteId } = await req.json();
-    if (!voiceNoteId) throw new Error('Missing or invalid voiceNoteId');
-  
+    const { voiceNoteId } = await req.json()
+    console.log('Processing voice note:', voiceNoteId)
+
+    if (!voiceNoteId) {
+      throw new Error('Missing voiceNoteId parameter')
+    }
+
+    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-  
+    )
+
+    // Fetch voice note details
     const { data: voiceNote, error: fetchError } = await supabaseClient
       .from('voice_notes')
       .select('*')
       .eq('id', voiceNoteId)
-      .single();
-  
-    if (fetchError || !voiceNote) throw new Error('Voice note not found');
-  
-    const audioUrl = new URL(voiceNote.audio_url);
-    const audioPath = audioUrl.pathname.split('/voice_notes/').pop();
-    if (!audioPath) throw new Error('Invalid audio URL format');
-  
+      .single()
+
+    if (fetchError || !voiceNote) {
+      console.error('Error fetching voice note:', fetchError)
+      throw new Error('Voice note not found')
+    }
+
+    console.log('Found voice note:', voiceNote.id)
+
+    // Extract the file path from the audio_url
+    const audioUrl = new URL(voiceNote.audio_url)
+    const audioPath = audioUrl.pathname.split('/voice_notes/').pop()
+    if (!audioPath) {
+      console.error('Invalid audio URL format:', voiceNote.audio_url)
+      throw new Error('Invalid audio URL format')
+    }
+
+    console.log('Downloading audio file from path:', audioPath)
+
+    // Download the audio file
     const { data: audioData, error: downloadError } = await supabaseClient
       .storage
       .from('voice_notes')
-      .download(audioPath);
-  
-    if (downloadError || !audioData) throw new Error('Could not download audio file');
-  
-    const audioBlob = new Blob([audioData], { type: 'audio/webm' }); // Ensure correct MIME type
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-  
+      .download(audioPath)
+
+    if (downloadError || !audioData) {
+      console.error('Error downloading audio:', downloadError)
+      throw new Error('Could not download audio file')
+    }
+
+    console.log('Successfully downloaded audio file')
+    console.log('Audio file type:', audioData.type)
+
+    // Create form data for OpenAI
+    const formData = new FormData()
+    
+    // Create a new blob with explicit MIME type and proper extension
+    const audioBlob = new Blob([audioData], { type: 'audio/webm' })
+    formData.append('file', audioBlob, `audio.${audioPath.split('.').pop() || 'webm'}`)
+    formData.append('model', 'whisper-1')
+
+    console.log('Sending request to OpenAI')
+
+    // Call OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}` },
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      },
       body: formData,
-    });
-  
+    })
+
     if (!openAIResponse.ok) {
-      const error = await openAIResponse.text();
-      console.error('OpenAI API error:', error);
-      throw new Error('Failed to create transcript');
+      const errorText = await openAIResponse.text()
+      console.error('OpenAI API error:', errorText)
+      throw new Error(`OpenAI API error: ${errorText}`)
     }
-  
-    const transcriptionResult = await openAIResponse.json();
-  
+
+    const transcriptionResult = await openAIResponse.json()
+    console.log('Received transcription from OpenAI')
+
+    // Update the voice note with the transcript
     const { error: updateError } = await supabaseClient
       .from('voice_notes')
       .update({ transcript: transcriptionResult.text })
-      .eq('id', voiceNoteId);
-  
-    if (updateError) throw new Error('Failed to update transcript');
-  
+      .eq('id', voiceNoteId)
+
+    if (updateError) {
+      console.error('Error updating voice note:', updateError)
+      throw new Error('Failed to save transcript')
+    }
+
     return new Response(
       JSON.stringify({ transcript: transcriptionResult.text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  
+    )
+
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error in create-transcript function:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   }
 })
