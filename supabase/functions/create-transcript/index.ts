@@ -38,7 +38,8 @@ serve(async (req) => {
     console.log('Found voice note:', voiceNote.id)
 
     // Extract the file path from the audio_url
-    const audioPath = new URL(voiceNote.audio_url).pathname.split('/voice_notes/').pop()
+    const audioUrl = new URL(voiceNote.audio_url)
+    const audioPath = audioUrl.pathname.split('/voice_notes/').pop()
     if (!audioPath) {
       console.error('Invalid audio URL format:', voiceNote.audio_url)
       throw new Error('Invalid audio URL format')
@@ -58,12 +59,13 @@ serve(async (req) => {
     }
 
     console.log('Successfully downloaded audio file')
-    console.log('Audio file type:', audioData.type) // Log the file type
+    console.log('Audio file type:', audioData.type)
 
     // Create form data for OpenAI
     const formData = new FormData()
-    // Ensure we're sending the file with the correct MIME type
-    formData.append('file', audioData, 'audio.webm')
+    // Create a new blob with explicit MIME type
+    const audioBlob = new Blob([audioData], { type: 'audio/webm' })
+    formData.append('file', audioBlob, 'audio.webm')
     formData.append('model', 'whisper-1')
 
     console.log('Sending request to OpenAI')
