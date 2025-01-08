@@ -68,12 +68,15 @@ serve(async (req) => {
     // Create form data for OpenAI
     const formData = new FormData()
     
-    // Create a new blob with explicit MIME type
-    const audioBlob = new Blob([audioData], { type: 'audio/webm' })
-    formData.append('file', audioBlob, `audio.webm`)
+    // Get the file extension from the original file path
+    const fileExtension = audioPath.split('.').pop() || 'webm'
+    
+    // Create a new blob with the original audio type
+    const audioBlob = new Blob([audioData], { type: audioData.type })
+    formData.append('file', audioBlob, `audio.${fileExtension}`)
     formData.append('model', 'whisper-1')
 
-    console.log('Sending request to OpenAI')
+    console.log('Sending request to OpenAI with file extension:', fileExtension)
 
     // Call OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
