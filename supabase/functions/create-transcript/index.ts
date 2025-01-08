@@ -38,9 +38,7 @@ serve(async (req) => {
     console.log('Found voice note:', voiceNote.id)
 
     // Extract the file path from the audio_url
-    // The audio_url is typically in the format: 
-    // https://xxx.supabase.co/storage/v1/object/public/voice_notes/path/to/file.mp3
-    const audioPath = voiceNote.audio_url.split('/voice_notes/').pop()
+    const audioPath = new URL(voiceNote.audio_url).pathname.split('/voice_notes/').pop()
     if (!audioPath) {
       console.error('Invalid audio URL format:', voiceNote.audio_url)
       throw new Error('Invalid audio URL format')
@@ -48,28 +46,27 @@ serve(async (req) => {
 
     console.log('Audio path:', audioPath)
 
-    // Get a signed URL for the file
-    const { data: signedURL, error: signedURLError } = await supabaseClient
+    // Download the audio file
+    const { data: audioData, error: downloadError } = await supabaseClient
       .storage
       .from('voice_notes')
-      .createSignedUrl(audioPath, 60)
+      .download(audioPath)
 
-    if (signedURLError || !signedURL?.signedUrl) {
-      console.error('Error creating signed URL:', signedURLError)
-      throw new Error('Could not get audio file URL')
+    if (downloadError || !audioData) {
+      console.error('Error downloading audio:', downloadError)
+      throw new Error('Could not download audio file')
     }
 
-    console.log('Created signed URL successfully')
+    console.log('Successfully downloaded audio file')
 
-    // Create transcript using OpenAI
+    // Create form data for OpenAI
     const formData = new FormData()
-    const audioResponse = await fetch(signedURL.signedUrl)
-    const audioBlob = await audioResponse.blob()
-    formData.append('file', audioBlob, 'audio.mp3')
+    formData.append('file', audioData, 'audio.webm')
     formData.append('model', 'whisper-1')
 
     console.log('Sending request to OpenAI')
 
+    // Send to OpenAI for transcription
     const openAIResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
