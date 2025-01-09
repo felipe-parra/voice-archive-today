@@ -95,6 +95,7 @@ const Login = () => {
           theme="dark"
           providers={[]}
           view="sign_in"
+          showLinks={false}
         />
         <div className="text-center text-sm">
           <span className="text-muted-foreground">Don't have an account? </span>
