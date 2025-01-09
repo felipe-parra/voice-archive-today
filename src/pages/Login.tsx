@@ -4,22 +4,25 @@ import { supabase } from '@/integrations/supabase/client'
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useToast } from '@/components/ui/use-toast'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const Login = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const checkSession = async () => {
       try {
         const {
           data: { session },
-          error,
+          error: sessionError,
         } = await supabase.auth.getSession()
 
-        if (error) {
-          console.error('Session check error:', error)
+        if (sessionError) {
+          console.error('Session check error:', sessionError)
+          setError(sessionError.message)
           // Clear any existing session data
           await supabase.auth.signOut()
           toast({
@@ -35,6 +38,7 @@ const Login = () => {
         }
       } catch (error) {
         console.error('Unexpected error during session check:', error)
+        setError('An unexpected error occurred. Please try again.')
         // Clear any existing session data
         await supabase.auth.signOut()
       } finally {
@@ -50,10 +54,12 @@ const Login = () => {
       console.log('Auth state changed:', event, session)
 
       if (event === 'SIGNED_IN' && session) {
+        // Store the session in localStorage
+        localStorage.setItem('supabase.auth.token', session.access_token)
         navigate('/')
-      } else if (event === 'SIGNED_OUT') {
-        // Clear any existing session data
-        await supabase.auth.signOut()
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        // Clear session data
+        localStorage.removeItem('supabase.auth.token')
         setIsLoading(false)
       }
     })
@@ -76,10 +82,13 @@ const Login = () => {
       <div className="w-full max-w-md space-y-8 bg-background/80 backdrop-blur-sm p-8 rounded-lg shadow-xl">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-primary">Welcome Back</h2>
-          <p className="mt-2 text-muted-foreground">
-            Please sign in to continue
-          </p>
+          <p className="mt-2 text-muted-foreground">Please sign in to continue</p>
         </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
