@@ -96,23 +96,54 @@ export function createApp(auth: AuthService, archive: ArchiveService, repo: Repo
   app.patch('/api/voice-notes/:id', async c => c.json(await archive.update(c.get('userId'), pathId(c.req.param('id')), notePatch.parse(await c.req.json()))));
   app.delete('/api/voice-notes/:id', async c => { await archive.remove(c.get('userId'), pathId(c.req.param('id'))); return c.body(null, 204); });
   app.get('/api/voice-notes/:id/audio', async c => {
-    const audio = await archive.audio(c.get('userId'), pathId(c.req.param('id')));
-    c.header('Content-Type', audio.contentType);
+    const id = pathId(c.req.param('id'));
+    const rangeHeader = c.req.header('Range');
+    if (!rangeHeader) {
+      const audio = await archive.audio(c.get('userId'), id);
+      c.header('Content-Type', audio.contentType);
+      c.header('Accept-Ranges', 'bytes');
+      c.header('Content-Disposition', 'inline');
+      return c.body(Buffer.from(audio.bytes));
+    }
+    const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+    if (!match || (!match[1] && !match[2])) {
+      c.header('Content-Range', 'bytes */0');
+      return c.body(null, 416);
+    }
+    let start: number | undefined;
+    let end: number | undefined;
+    if (match[1]) start = Number(match[1]);
+    if (match[2]) end = Number(match[2]);
+    if (start !== undefined && end !== undefined && start > end) {
+      c.header('Content-Range', 'bytes */0');
+      return c.body(null, 416);
+    }
+    let partial: Awaited<ReturnType<typeof archive.audio>>;
+    try {
+      partial = await archive.audio(c.get('userId'), id, { start, end });
+    } catch (error) {
+      if (error instanceof Error && /range/i.test(error.message)) {
+        c.header('Content-Range', 'bytes */0');
+        return c.body(null, 416);
+      }
+      throw error;
+    }
+    const length = partial.length || 0;
+    if (length === 0) {
+      c.header('Content-Range', 'bytes */0');
+      return c.body(null, 416);
+    }
+    const normalizedStart = start !== undefined ? start : Math.max(0, length - (end ?? 0));
+    const normalizedEnd = end !== undefined ? Math.min(end, length - 1) : length - 1;
+    if (normalizedStart >= length || normalizedStart > normalizedEnd) {
+      c.header('Content-Range', `bytes */${length}`);
+      return c.body(null, 416);
+    }
+    c.header('Content-Type', partial.contentType);
     c.header('Accept-Ranges', 'bytes');
     c.header('Content-Disposition', 'inline');
-    const length = audio.bytes.length;
-    const range = c.req.header('Range');
-    if (range) {
-      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
-      let start = 0, end = length - 1;
-      if (!match || (!match[1] && !match[2])) { c.header('Content-Range', `bytes */${length}`); return c.body(null, 416); }
-      if (!match[1]) start = Math.max(0, length - Number(match[2]));
-      else { start = Number(match[1]); if (match[2]) end = Math.min(end, Number(match[2])); }
-      if (start > end || start >= length) { c.header('Content-Range', `bytes */${length}`); return c.body(null, 416); }
-      c.header('Content-Range', `bytes ${start}-${end}/${length}`);
-      return c.body(Buffer.from(audio.bytes.slice(start, end + 1)), 206);
-    }
-    return c.body(Buffer.from(audio.bytes));
+    c.header('Content-Range', `bytes ${normalizedStart}-${normalizedEnd}/${length}`);
+    return c.body(Buffer.from(partial.bytes), 206);
   });
   app.post('/api/voice-notes/:id/transcribe', async c => { limit(`ai:${c.get('userId')}`, 5); return c.json(await archive.transcribe(c.get('userId'), pathId(c.req.param('id')))); });
   app.post('/api/voice-notes/:id/summary', async c => { limit(`ai:${c.get('userId')}`, 5); return c.json(await archive.summary(c.get('userId'), pathId(c.req.param('id')))); });

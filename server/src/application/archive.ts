@@ -28,13 +28,21 @@ export class ArchiveService {
     if (!acceptedAudio.has(type)) throw new AppError(415, 'AUDIO_TYPE', 'Unsupported audio format.');
     const id = randomUUID();
     const key = `audio/${user}/${id}`;
-    await this.deps.storage.put(key, audio, type);
+    await this.deps.repository.enqueueDelete(key);
     try {
-      return this.noteDTO(await this.deps.repository.insertNote({ id, user_id: user, title, duration,
-        audio_key: key, audio_type: type, description: null, tags: [], transcript: null, created_at: this.deps.now().toISOString() }));
+      await this.deps.storage.put(key, audio, type);
+      const note = await this.deps.repository.insertNote({ id, user_id: user, title, duration,
+        audio_key: key, audio_type: type, description: null, tags: [], transcript: null, created_at: this.deps.now().toISOString() });
+      await this.deps.repository.completeDelete(key);
+      return this.noteDTO(note);
     } catch (error) {
-      // Compensate upload when the database refuses the insert. Never expose provider errors.
-      await this.deps.storage.delete(key).catch(() => undefined);
+      // If the durable database insert fails, keep the key in the retry outbox when a best-effort delete also fails.
+      try {
+        await this.deps.storage.delete(key);
+        await this.deps.repository.completeDelete(key);
+      } catch {
+        // Leave the key queued for the container retry loop while the storage/provider outage is resolved.
+      }
       throw error;
     }
   }
@@ -49,9 +57,9 @@ export class ArchiveService {
       catch { /* Durable outbox is retried by the container maintenance timer. */ }
     }
   }
-  async audio(user: string, id: string) {
+  async audio(user: string, id: string, range?: { start?: number; end?: number }) {
     const note = required(await this.deps.repository.getNote(user, id));
-    return this.deps.storage.get(note.audio_key);
+    return range ? this.deps.storage.getRange(note.audio_key, range.start, range.end) : this.deps.storage.get(note.audio_key);
   }
   async document(user: string, id: string) { return this.documentDTO(required(await this.deps.repository.getDocument(user, id))); }
   async noteDocument(user: string, id: string) {

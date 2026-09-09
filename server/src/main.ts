@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { serve } from '@hono/node-server';
 import { getConnInfo } from '@hono/node-server/conninfo';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import { AuthService } from './application/auth.js';
 import { ArchiveService } from './application/archive.js';
@@ -37,7 +38,11 @@ const intelligence = new OpenAIIntelligence({ apiKey: env.OPENAI_API_KEY ?? '' }
 const now = () => new Date();
 const auth = new AuthService(repository, mailer, { create: () => randomBytes(32).toString('base64url'), hash: value => createHash('sha256').update(value).digest('hex') }, now, web.origin);
 const archive = new ArchiveService({ repository, storage, intelligence, mailer, now }, env.DOCUMENT_EMAIL_ENABLED === 'true');
-const app = createApp(auth, archive, repository, { origins, secureCookies: env.NODE_ENV === 'production', clientKey: c => getConnInfo(c).remote.address ?? 'unknown-peer' });
+const clientKey = (c: Context) => {
+  const forwarded = c.req.header('x-forwarded-for')?.split(',').map(value => value.trim()).find(Boolean);
+  return forwarded ?? getConnInfo(c).remote.address ?? 'unknown-peer';
+};
+const app = createApp(auth, archive, repository, { origins, secureCookies: env.NODE_ENV === 'production', clientKey });
 const server = serve({ fetch: app.fetch, port: env.PORT });
 // A single API process retries its durable deletion outbox; no separate worker service.
 let cleaning = false;

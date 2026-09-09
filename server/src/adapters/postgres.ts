@@ -86,6 +86,7 @@ export class PostgresRepository implements Repository {
       INSERT INTO object_deletions(key) SELECT audio_key FROM deleted ON CONFLICT(key) DO NOTHING RETURNING key`,[userId,id]);
     return Boolean(result.rowCount);
   }
+  async enqueueDelete(key: string) { await this.pool.query('INSERT INTO object_deletions(key) VALUES($1) ON CONFLICT(key) DO NOTHING',[key]); }
   async getDocument(userId: string,id: string) { return serialize<StoredDocument>((await this.pool.query('SELECT * FROM documents WHERE user_id=$1 AND id=$2',[userId,id])).rows[0]); }
   async getNoteDocument(userId: string,noteId: string) { return serialize<StoredDocument>((await this.pool.query('SELECT * FROM documents WHERE user_id=$1 AND voice_note_id=$2',[userId,noteId])).rows[0]); }
   async saveDocument(userId: string,input: DocumentInput) {

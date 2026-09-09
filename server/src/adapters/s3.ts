@@ -13,7 +13,15 @@ export class S3ObjectStore implements ObjectStore {
   async get(key: string) {
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.config.bucket, Key: key }), { abortSignal: AbortSignal.timeout(60000) });
     if (!result.Body) throw new Error('Object response has no body');
-    return { bytes: await result.Body.transformToByteArray(), contentType: result.ContentType ?? 'application/octet-stream' };
+    const bytes = await result.Body.transformToByteArray();
+    return { bytes, contentType: result.ContentType ?? 'application/octet-stream', length: result.ContentLength ?? bytes.length };
+  }
+  async getRange(key: string, start?: number, end?: number) {
+    const range = start === undefined && end === undefined ? undefined : start === undefined ? `bytes=-${end}` : end === undefined ? `bytes=${start}-` : `bytes=${start}-${end}`;
+    const result = await this.client.send(new GetObjectCommand({ Bucket: this.config.bucket, Key: key, Range: range }), { abortSignal: AbortSignal.timeout(60000) });
+    if (!result.Body) throw new Error('Object response has no body');
+    const bytes = await result.Body.transformToByteArray();
+    return { bytes, contentType: result.ContentType ?? 'application/octet-stream', length: result.ContentRange ? Number(result.ContentRange.match(/\/(\d+)$/)?.[1] ?? bytes.length) : bytes.length };
   }
   async delete(key: string) { await this.client.send(new DeleteObjectCommand({ Bucket: this.config.bucket, Key: key }), { abortSignal: AbortSignal.timeout(60000) }); }
 }

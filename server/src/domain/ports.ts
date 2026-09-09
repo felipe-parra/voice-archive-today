@@ -20,6 +20,7 @@ export interface Repository {
   updateNote(userId: string, id: string, patch: NotePatch): Promise<StoredNote | null>;
   /** Delete database rows and enqueue audio key for durable cleanup in the same transaction. */
   deleteNote(userId: string, id: string): Promise<boolean>;
+  enqueueDelete(key: string): Promise<void>;
   getDocument(userId: string, id: string): Promise<StoredDocument | null>;
   getNoteDocument(userId: string, noteId: string): Promise<StoredDocument | null>;
   /** One document per note; linked note ownership must be checked atomically. */
@@ -30,7 +31,8 @@ export interface Repository {
 }
 export interface ObjectStore {
   put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
-  get(key: string): Promise<{ bytes: Uint8Array; contentType: string }>;
+  get(key: string): Promise<{ bytes: Uint8Array; contentType: string; length: number }>;
+  getRange(key: string, start?: number, end?: number): Promise<{ bytes: Uint8Array; contentType: string; length: number }>;
   delete(key: string): Promise<void>;
 }
 export interface Intelligence {
