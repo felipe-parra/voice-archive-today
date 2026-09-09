@@ -1,110 +1,111 @@
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '@/integrations/supabase/client'
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useNavigate, Link } from 'react-router-dom'
-import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AuthLayout } from '@/components/AuthLayout'
+import { useToast } from '@/components/ui/use-toast'
+import { USE_FIXTURES } from '@/data/mode'
+import { getSession } from '@/data/session'
+import { signIn } from '@/data/auth'
+
+interface LoginFields {
+  email: string
+  password: string
+}
 
 const Login = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<LoginFields>({ defaultValues: { email: '', password: '' } })
 
   useEffect(() => {
+    if (USE_FIXTURES) return
     const checkSession = async () => {
-      try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          console.error('Session check error:', sessionError)
-          setError(sessionError.message)
-          // Clear any existing session data
-          await supabase.auth.signOut()
-          toast({
-            title: 'Session Error',
-            description: 'Please sign in again',
-            variant: 'destructive',
-          })
-          return
-        }
-
-        if (session) {
-          navigate('/')
-        }
-      } catch (error) {
-        console.error('Unexpected error during session check:', error)
-        setError('An unexpected error occurred. Please try again.')
-        // Clear any existing session data
-        await supabase.auth.signOut()
-      } finally {
-        setIsLoading(false)
-      }
+      const {
+        data: { session },
+      } = await getSession()
+      if (session) navigate('/')
     }
-
     checkSession()
+  }, [navigate])
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session)
-
-      if (event === 'SIGNED_IN' && session) {
-        // Store the session in localStorage
-        localStorage.setItem('supabase.auth.token', session.access_token)
-        navigate('/')
-      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        // Clear session data
-        localStorage.removeItem('supabase.auth.token')
-        setIsLoading(false)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
+  const onSubmit = async (values: LoginFields) => {
+    setError(null)
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'Sign-in is disabled in the fixture preview.',
+      })
+      return
     }
-  }, [navigate, toast])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-accent">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+    const result = await signIn(values.email, values.password)
+    if (result && 'error' in result && result.error) {
+      setError(result.error.message)
+      return
+    }
+    navigate('/')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-accent p-4">
-      <div className="w-full max-w-md space-y-8 bg-background/80 backdrop-blur-sm p-8 rounded-lg shadow-xl">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-primary">Welcome Back</h2>
-          <p className="mt-2 text-muted-foreground">Please sign in to continue</p>
+    <AuthLayout>
+      <div className="grid items-center gap-12 md:grid-cols-2">
+        <div>
+          <p className="va-eyebrow">01 / Sign in</p>
+          <h1 className="mt-6 text-5xl font-bold leading-[0.96] tracking-tight text-foreground md:text-6xl">
+            Welcome back.
+          </h1>
+          <p className="mt-6 max-w-md text-lg text-muted-foreground">
+            Pick up your archive where you left it. Every note you have captured
+            is one search away.
+          </p>
         </div>
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          theme="dark"
-          providers={[]}
-          view="sign_in"
-          showLinks={false}
-        />
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account? </span>
-          <Link to="/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
+
+        <div className="rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)]">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email', { required: true })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password', { required: true })}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link to="/register" className="va-text-link text-foreground">
+              Start your archive
+            </Link>
+          </p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   )
 }
 

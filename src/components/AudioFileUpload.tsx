@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Upload } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/integrations/supabase/client'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface AudioFileUploadProps {
   onUploadComplete: () => void
@@ -17,6 +18,15 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
   ) => {
     const file = event.target.files?.[0]
     if (!file) return
+
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
 
     if (!file.type.startsWith('audio/')) {
       toast({
@@ -37,7 +47,7 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
         .split('.')
         .pop()}`
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('voice_notes')
         .upload(fileName, file)
 
@@ -70,7 +80,6 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
       })
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -87,10 +96,10 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
       />
       <Button
         onClick={() => fileInputRef.current?.click()}
-        variant={'link'}
-        className=""
+        variant="link"
+        className="va-text-link gap-2 text-foreground"
       >
-        <Upload className="h-6 w-6" />
+        <Upload className="h-4 w-4" />
         <span>Upload audio</span>
       </Button>
     </div>

@@ -1,93 +1,98 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/integrations/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
+import { AppShell } from '@/components/AppShell'
 import { ProfileForm } from '@/components/ProfileForm'
+import { useAuthGuard } from '@/data/auth'
+import { getSession } from '@/data/session'
+import { getProfile } from '@/data/voiceNotes'
+import { USE_FIXTURES } from '@/data/mode'
+import { FIXTURE_PROFILE } from '@/data/fixtures'
+
+interface ProfileData {
+  email: string
+  full_name: string
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say'
+  birthdate: Date
+  avatar_url: string
+}
 
 const Account = () => {
-  const navigate = useNavigate()
+  useAuthGuard()
   const [isLoading, setIsLoading] = useState(true)
-  const [profileData, setProfileData] = useState(null)
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
 
-  const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      navigate('/login')
-      return
-    }
-
-    // Fetch profile data
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
-
-    if (error) {
-      console.error('Error fetching profile:', error)
-      return
-    }
-
-    if (profile) {
+  const loadProfile = async () => {
+    if (USE_FIXTURES) {
       setProfileData({
-        email: session.user.email,
-        full_name: profile.full_name || '',
-        gender: profile.gender || 'prefer_not_to_say',
-        birthdate: profile.birthdate ? new Date(profile.birthdate) : new Date(),
-        avatar_url: profile.avatar_url || '',
+        email: FIXTURE_PROFILE.email,
+        full_name: FIXTURE_PROFILE.full_name,
+        gender: FIXTURE_PROFILE.gender,
+        birthdate: FIXTURE_PROFILE.birthdate,
+        avatar_url: FIXTURE_PROFILE.avatar_url,
       })
+      setIsLoading(false)
+      return
     }
 
-    setIsLoading(false)
+    try {
+      const {
+        data: { session },
+      } = await getSession()
+      if (!session) {
+        setIsLoading(false)
+        return
+      }
+
+      const profile = await getProfile(session.user.id)
+      if (profile) {
+        setProfileData({
+          email: session.user.email ?? '',
+          full_name: profile.full_name || '',
+          gender:
+            (profile.gender as ProfileData['gender']) || 'prefer_not_to_say',
+          birthdate: profile.birthdate
+            ? new Date(profile.birthdate)
+            : new Date(),
+          avatar_url: profile.avatar_url || '',
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
-    checkSession()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate('/login')
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
+    loadProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate])
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  }, [])
 
   return (
-    <div className="container mx-auto p-4">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {profileData && (
-            <ProfileForm
-              initialData={profileData}
-              onSave={() => {
-                // Refresh profile data after save
-                checkSession()
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <AppShell>
+      {isLoading ? (
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-2xl">
+          <p className="va-eyebrow">04 / Profile</p>
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+            Your account.
+          </h1>
+
+          <div className="mt-10 rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)]">
+            {profileData ? (
+              <ProfileForm initialData={profileData} onSave={loadProfile} />
+            ) : (
+              <p className="text-muted-foreground">
+                We couldn&apos;t load your profile. Try again shortly.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </AppShell>
   )
 }
 

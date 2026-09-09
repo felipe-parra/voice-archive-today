@@ -19,6 +19,7 @@ import {
 } from '@mdxeditor/editor'
 import { DocumentActions } from './voice-note/DocumentActions'
 import { useQuery } from '@tanstack/react-query'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface DocumentEditorProps {
   initialContent?: string
@@ -41,7 +42,7 @@ export const DocumentEditor = ({
   const { data: documentContent } = useQuery({
     queryKey: ['documentContent', documentId],
     queryFn: async () => {
-      if (!documentId) return initialContent || ''
+      if (USE_FIXTURES || !documentId) return initialContent || ''
       const { data, error } = await supabase
         .from('documents')
         .select('content')
@@ -62,6 +63,13 @@ export const DocumentEditor = ({
   }, [documentContent])
 
   const saveContent = async () => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     setIsSaving(true)
     try {
       // Create a Blob from the markdown content
@@ -127,7 +135,7 @@ export const DocumentEditor = ({
 
   useEffect(() => {
     const fetchMarkdownUrl = async () => {
-      if (documentId) {
+      if (documentId && !USE_FIXTURES) {
         const { data, error } = await supabase
           .from('documents')
           .select('markdown_url')
@@ -144,9 +152,11 @@ export const DocumentEditor = ({
   }, [documentId])
 
   return (
-    <div className="rounded-lg bg-accent/50 p-6 backdrop-blur-sm">
+    <div className="rounded-lg border border-border bg-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-primary">Document</h3>
+        <h3 className="font-display text-lg font-semibold text-foreground">
+          Document
+        </h3>
         <Button
           onClick={saveContent}
           disabled={isSaving}
@@ -157,7 +167,7 @@ export const DocumentEditor = ({
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </div>
-      <div className="prose prose-invert max-w-none">
+      <div className="prose prose-stone max-w-none">
         <MDXEditor
           markdown={content}
           onChange={setContent}
@@ -179,8 +189,8 @@ export const DocumentEditor = ({
               ),
             }),
           ]}
-          contentEditableClassName="min-h-[200px] p-4 bg-background/50 rounded-md text-foreground"
-          className="mdxeditor !bg-background/50 !text-foreground [&_*]:!text-foreground [&_.toolbar]:!bg-accent [&_.toolbar]:border-primary/20 [&_.toolbar]:rounded-t-md [&_.toolbar]:p-2 [&_button]:!text-foreground [&_button:hover]:!bg-primary/20 [&_select]:!text-foreground [&_select]:!bg-accent [&_select]:!border-primary/20"
+          contentEditableClassName="min-h-[200px] p-4 bg-transparent rounded-md"
+          className="mdxeditor"
         />
       </div>
       <DocumentActions documentId={documentId} markdownUrl={markdownUrl} />

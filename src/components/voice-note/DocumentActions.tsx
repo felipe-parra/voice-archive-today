@@ -12,11 +12,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/integrations/supabase/client'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface DocumentActionsProps {
   documentId?: string
   markdownUrl?: string | null
 }
+
+const OUTLINE_ON_DARK =
+  'border-white/20 text-charcoal-foreground hover:bg-white/10 hover:text-charcoal-foreground'
 
 export const DocumentActions = ({
   documentId,
@@ -27,6 +31,13 @@ export const DocumentActions = ({
   const { toast } = useToast()
 
   const handleDownload = async () => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     if (!markdownUrl) {
       toast({
         title: 'Error',
@@ -49,6 +60,13 @@ export const DocumentActions = ({
   }
 
   const handleSendEmail = async () => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     if (!documentId) {
       toast({
         title: 'Error',
@@ -92,48 +110,52 @@ export const DocumentActions = ({
   }
 
   return (
-    <div className="flex gap-2 mt-4">
-      <Button
-        variant="outline"
-        onClick={handleDownload}
-        disabled={!markdownUrl}
-      >
-        <Download className="mr-2 h-4 w-4" />
-        Download
-      </Button>
+    <div className="va-terminal mt-6">
+      <p className="va-eyebrow">Document actions</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          className={OUTLINE_ON_DARK}
+          onClick={handleDownload}
+          disabled={!markdownUrl}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download
+        </Button>
 
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="outline">
-            <Mail className="mr-2 h-4 w-4" />
-            Send via Email
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Document via Email</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter recipient's email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={handleSendEmail}
-              disabled={!email || isSending}
-              className="w-full"
-            >
-              {isSending ? 'Sending...' : 'Send'}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className={OUTLINE_ON_DARK}>
+              <Mail className="mr-2 h-4 w-4" />
+              Send via email
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send document via email</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter recipient's email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={handleSendEmail}
+                disabled={!email || isSending}
+                className="w-full"
+              >
+                {isSending ? 'Sending…' : 'Send'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }

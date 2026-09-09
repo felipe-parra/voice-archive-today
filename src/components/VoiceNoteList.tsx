@@ -22,6 +22,7 @@ import { useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { VoiceNote } from '@/interfaces/voice.interface'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface VoiceNoteListProps {
   recordings: VoiceNote[]
@@ -49,7 +50,19 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
     onUpdate()
   }
 
+  const demoGuard = () => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return true
+    }
+    return false
+  }
+
   const handleDelete = async (recording: VoiceNote) => {
+    if (demoGuard()) return
     try {
       const { error } = await supabase
         .from('voice_notes')
@@ -76,6 +89,7 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   }
 
   const transcribeAudio = async (voiceNote: VoiceNote) => {
+    if (demoGuard()) return
     try {
       setIsTranscribing(voiceNote.id)
       const { data, error } = await supabase.functions.invoke(
@@ -113,15 +127,17 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
       {recordings.map((recording) => (
         <div
           key={recording.id}
-          className="flex items-center justify-between rounded-lg bg-accent/50 p-4 backdrop-blur-sm"
+          className="flex items-center justify-between rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40"
         >
           <div
             className="flex-grow cursor-pointer"
             onClick={() => navigate(`/voice-note/${recording.id}`)}
           >
-            <p className="text-primary">{recording.title}</p>
+            <p className="font-display text-lg text-foreground">
+              {recording.title}
+            </p>
             {recording.description && (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {recording.description}
               </p>
             )}
@@ -130,14 +146,14 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
                 {recording.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                    className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-full"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
             )}
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               {new Date(recording.created_at).toLocaleString()}
             </p>
           </div>
@@ -268,8 +284,11 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
       </Dialog>
 
       {recordings.length === 0 && (
-        <div className="text-center text-gray-400">
-          <p>No recordings yet</p>
+        <div className="rounded-lg border border-dashed border-border p-10 text-center">
+          <p className="va-eyebrow">No notes yet</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Record your first note from the Record tab.
+          </p>
         </div>
       )}
     </div>
