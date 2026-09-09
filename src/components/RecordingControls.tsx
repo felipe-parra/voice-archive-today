@@ -11,7 +11,31 @@ interface RecordingControlsProps {
   onRecordingComplete: () => void
 }
 
-const WAVE_BARS = Array.from({ length: 32 }, (_, i) => 12 + ((i * 17) % 42))
+// Deterministic voice-shaped envelope: a centre-weighted spindle with texture,
+// so the specimen reads as a real waveform rather than a repeating ramp.
+const WAVE_BARS = Array.from({ length: 32 }, (_, i) => {
+  const envelope = Math.sin((i / 31) * Math.PI)
+  const texture = 0.45 + 0.55 * Math.abs(Math.sin(i * 1.9) * Math.cos(i * 0.7))
+  return Math.round(14 + 74 * envelope * texture)
+})
+
+const WaveGlyph = () => (
+  <svg
+    width="22"
+    height="10"
+    viewBox="0 0 22 10"
+    fill="none"
+    aria-hidden="true"
+    className="text-primary"
+  >
+    <path
+      d="M1 5c1.6-4.2 3.7-4.2 5.3 0s3.7 4.2 5.3 0 3.7-4.2 5.3 0 3.4 3.4 4.1 1.6"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+)
 
 export const RecordingControls = ({
   onRecordingComplete,
@@ -112,17 +136,20 @@ export const RecordingControls = ({
     <div className="flex flex-col items-center gap-10">
       <article className="va-specimen mx-auto w-full max-w-[470px]">
         <div className="va-specimen-top">
-          <strong>〰 new note</strong>
+          <strong className="inline-flex items-center gap-2">
+            <WaveGlyph />
+            new note
+          </strong>
           <span>{isRecording ? 'REC' : '00:00'}</span>
         </div>
 
-        <p className="va-eyebrow mt-4">Capture</p>
-        <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-foreground">
+        <p className="va-eyebrow mt-5">Capture</p>
+        <h2 className="mt-3 text-[34px] font-bold leading-[1.03] tracking-[-0.03em] text-foreground">
           Speak now. Sort it later.
         </h2>
 
         <div
-          className="va-wave mt-6"
+          className="va-wave mt-6 overflow-hidden"
           data-recording={isRecording ? 'true' : 'false'}
           aria-hidden="true"
         >

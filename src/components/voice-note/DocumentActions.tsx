@@ -20,7 +20,7 @@ interface DocumentActionsProps {
 }
 
 const OUTLINE_ON_DARK =
-  'border-white/20 text-charcoal-foreground hover:bg-white/10 hover:text-charcoal-foreground'
+  'border-white/20 bg-transparent text-charcoal-foreground hover:bg-white/10 hover:text-charcoal-foreground'
 
 export const DocumentActions = ({
   documentId,
