@@ -8,6 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/components/ui/use-toast'
 import { signOut } from '@/data/auth'
 import CreatedBy from './CreatedBy'
 
@@ -17,10 +19,17 @@ interface AppShellProps {
 
 export const AppShell = ({ children }: AppShellProps) => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const handleLogout = async () => {
-    await signOut()
-    navigate('/login')
+    try {
+      await signOut()
+      queryClient.clear()
+      navigate('/login')
+    } catch (error) {
+      toast({ title: 'Could not sign out', description: 'Please try again.', variant: 'destructive' })
+    }
   }
 
   return (

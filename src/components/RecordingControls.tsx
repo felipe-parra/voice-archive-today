@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Mic, Square, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { AudioRecorder } from '@/utils/audioRecorder'
-import { supabase } from '@/integrations/supabase/client'
+import { uploadVoiceNote } from '@/data/voiceNotes'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AudioFileUpload } from './AudioFileUpload'
 import { USE_FIXTURES } from '@/data/mode'
@@ -46,7 +46,12 @@ export const RecordingControls = ({
 
   const [isRecording, setIsRecording] = useState(demoRecording)
   const [isLoading, setIsLoading] = useState(false)
+  const startedAt = useRef(0)
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder())
+  useEffect(() => {
+    const recorder = recorderRef.current
+    return () => recorder.cancel()
+  }, [])
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -65,6 +70,7 @@ export const RecordingControls = ({
     if (demoGuard()) return
     try {
       await recorderRef.current.startRecording()
+      startedAt.current = Date.now()
       setIsRecording(true)
     } catch (error) {
       toast({
@@ -83,35 +89,7 @@ export const RecordingControls = ({
       const audioBlob = await recorderRef.current.stopRecording()
       setIsRecording(false)
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const fileName = `${user.id}/recording-${Date.now()}.webm`
-
-      const { error: uploadError } = await supabase.storage
-        .from('voice_notes')
-        .upload(fileName, audioBlob)
-
-      if (uploadError) throw uploadError
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('voice_notes').getPublicUrl(fileName)
-
-      const { data: noteData, error: dbError } = await supabase
-        .from('voice_notes')
-        .insert({
-          title: `Recording ${new Date().toLocaleTimeString()}`,
-          audio_url: publicUrl,
-          duration: 0,
-          user_id: user.id,
-        })
-        .select()
-        .single()
-
-      if (dbError) throw dbError
+      const noteData = await uploadVoiceNote(audioBlob, `Recording ${new Date().toLocaleTimeString()}`, Math.round((Date.now() - startedAt.current) / 1000), audioBlob.type.includes('mp4') ? 'recording.m4a' : 'recording.webm')
 
       onRecordingComplete()
       toast({
@@ -159,9 +137,9 @@ export const RecordingControls = ({
         </div>
 
         <div className="va-note mt-6">
-          <span>Live transcript</span>
+          <span>Recording</span>
           <p>
-            {isRecording ? 'Listening…' : 'Press the mic to start a note.'}
+            {isRecording ? 'Recording… Transcribe after saving.' : 'Press the mic to start a note.'}
           </p>
         </div>
       </article>

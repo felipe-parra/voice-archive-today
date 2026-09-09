@@ -1,87 +1,29 @@
-import { supabase } from '@/integrations/supabase/client'
+import type { VoiceNote, Document, Profile, NotePatch, ProfilePatch, DocumentInput, DocumentPatch } from '../../shared/contracts'
+import { api, jsonBody } from './api'
 import { USE_FIXTURES } from './mode'
-import {
-  FIXTURE_DOCUMENTS,
-  FIXTURE_PROFILE,
-  FIXTURE_VOICE_NOTES,
-} from './fixtures'
-
-export const listVoiceNotes = async () => {
-  if (USE_FIXTURES) {
-    return [...FIXTURE_VOICE_NOTES]
-  }
-
-  const { data, error } = await supabase
-    .from('voice_notes')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('Error loading recordings:', error)
-    throw error
-  }
-  return data || []
-}
-
+import { FIXTURE_DOCUMENTS, FIXTURE_PROFILE, FIXTURE_VOICE_NOTES } from './fixtures'
+export const listVoiceNotes = async () => USE_FIXTURES ? [...FIXTURE_VOICE_NOTES] : api<VoiceNote[]>('/voice-notes')
 export const getVoiceNote = async (id: string) => {
-  if (USE_FIXTURES) {
-    const note = FIXTURE_VOICE_NOTES.find((n) => n.id === id)
-    if (!note) throw new Error('Voice note not found')
-    return note
-  }
-
-  const { data, error } = await supabase
-    .from('voice_notes')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    console.error('Error fetching voice note:', error)
-    throw error
-  }
-  return data
+  if (!USE_FIXTURES) return api<VoiceNote>(`/voice-notes/${encodeURIComponent(id)}`)
+  const note = FIXTURE_VOICE_NOTES.find(n => n.id === id)
+  if (!note) throw new Error('Voice note not found')
+  return note
 }
-
-export const getDocumentForVoiceNote = async (voiceNoteId: string) => {
-  if (USE_FIXTURES) {
-    return FIXTURE_DOCUMENTS.find((d) => d.voice_note_id === voiceNoteId) || null
-  }
-
-  const { data, error } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('voice_note_id', voiceNoteId)
-    .maybeSingle()
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching document:', error)
-    throw error
-  }
-  return data
-}
-
-export const getProfile = async (userId: string) => {
-  if (USE_FIXTURES) {
-    return {
-      id: 'demo-user',
-      full_name: FIXTURE_PROFILE.full_name,
-      gender: FIXTURE_PROFILE.gender,
-      birthdate: '1993-05-01',
-      avatar_url: FIXTURE_PROFILE.avatar_url,
-      updated_at: null,
-    }
-  }
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
-
-  if (error) {
-    console.error('Error fetching profile:', error)
-    throw error
-  }
-  return data
+export const getDocumentForVoiceNote = async (id: string) => USE_FIXTURES ? FIXTURE_DOCUMENTS.find(d => d.voice_note_id === id) || null : api<Document | null>(`/voice-notes/${encodeURIComponent(id)}/document`)
+export const getProfile = async (_userId?: string): Promise<Profile> => USE_FIXTURES ? { id: 'demo-user', full_name: FIXTURE_PROFILE.full_name, gender: FIXTURE_PROFILE.gender, birthdate: '1993-05-01', avatar_url: FIXTURE_PROFILE.avatar_url, updated_at: null } : api<Profile>('/profile')
+export const updateProfile = (patch: ProfilePatch) => api<Profile>('/profile', { method: 'PATCH', body: jsonBody(patch) })
+export const updateVoiceNote = (id: string, patch: NotePatch) => api<VoiceNote>(`/voice-notes/${encodeURIComponent(id)}`, { method: 'PATCH', body: jsonBody(patch) })
+export const deleteVoiceNote = (id: string) => api<void>(`/voice-notes/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const transcribeVoiceNote = (id: string) => api<{ transcript: string }>(`/voice-notes/${encodeURIComponent(id)}/transcribe`, { method: 'POST' })
+export const summarizeVoiceNote = (id: string) => api<Document>(`/voice-notes/${encodeURIComponent(id)}/summary`, { method: 'POST' })
+export const getDocument = (id: string) => api<Document>(`/documents/${encodeURIComponent(id)}`)
+export const createDocument = (input: DocumentInput) => api<Document>('/documents', { method: 'POST', body: jsonBody(input) })
+export const updateDocument = (id: string, patch: DocumentPatch) => api<Document>(`/documents/${encodeURIComponent(id)}`, { method: 'PATCH', body: jsonBody(patch) })
+export const emailDocument = (id: string, to: string) => api<{ ok: true }>(`/documents/${encodeURIComponent(id)}/email`, { method: 'POST', body: jsonBody({ to }) })
+export const uploadVoiceNote = (audio: Blob, title: string, duration: number, fileName = 'recording.webm') => {
+  const data = new FormData()
+  data.append('audio', audio, fileName)
+  data.append('title', title)
+  data.append('duration', String(duration))
+  return api<VoiceNote>('/voice-notes', { method: 'POST', body: data })
 }

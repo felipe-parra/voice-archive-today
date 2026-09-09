@@ -1,23 +1,14 @@
-import { supabase } from '@/integrations/supabase/client'
+import type { Session } from '../../shared/contracts'
+import { api } from './api'
 import { USE_FIXTURES } from './mode'
 import { FIXTURE_SESSION } from './fixtures'
 
 export const getSession = async () => {
-  if (USE_FIXTURES) {
-    return { data: { session: FIXTURE_SESSION as any }, error: null }
-  }
-  return supabase.auth.getSession()
+  const session: Session | null = USE_FIXTURES ? FIXTURE_SESSION : await api<Session | null>('/auth/session')
+  return { data: { session }, error: null }
 }
-
-type AuthChangeCallback = Parameters<
-  typeof supabase.auth.onAuthStateChange
->[0]
-
-export const onAuthChange = (cb: AuthChangeCallback) => {
-  if (USE_FIXTURES) {
-    return { data: { subscription: { unsubscribe() {} } } } as ReturnType<
-      typeof supabase.auth.onAuthStateChange
-    >
-  }
-  return supabase.auth.onAuthStateChange(cb)
+export const onAuthChange = (cb: (event: string, session: Session | null) => void) => {
+  const expired = () => cb('SIGNED_OUT', null)
+  window.addEventListener('session-expired', expired)
+  return { data: { subscription: { unsubscribe: () => window.removeEventListener('session-expired', expired) } } }
 }

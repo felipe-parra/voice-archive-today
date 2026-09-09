@@ -11,7 +11,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { emailDocument } from '@/data/voiceNotes'
+import { apiResponse } from '@/data/api'
 import { USE_FIXTURES } from '@/data/mode'
 
 interface DocumentActionsProps {
@@ -47,16 +48,20 @@ export const DocumentActions = ({
       return
     }
 
-    const response = await fetch(markdownUrl)
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'document.md'
-    document.body.appendChild(a)
-    a.click()
-    window.URL.revokeObjectURL(url)
-    document.body.removeChild(a)
+    try {
+      const response = await apiResponse(`/documents/${encodeURIComponent(documentId!)}/markdown`)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'document.md'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      toast({ title: 'Download failed', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' })
+    }
   }
 
   const handleSendEmail = async () => {
@@ -78,20 +83,7 @@ export const DocumentActions = ({
 
     try {
       setIsSending(true)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase.functions.invoke('send-markdown-email', {
-        body: {
-          documentId,
-          to: email,
-          from: 'notifications@xilo.pro',
-        },
-      })
-
-      if (error) throw error
+      await emailDocument(documentId, email)
 
       toast({
         title: 'Success',

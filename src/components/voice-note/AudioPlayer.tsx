@@ -1,3 +1,4 @@
+import { mediaUrl } from '@/data/api'
 interface AudioPlayerProps {
   audioUrl: string
 }
@@ -24,7 +25,7 @@ export const AudioPlayer = ({ audioUrl }: AudioPlayerProps) => {
           <i key={i} style={{ height: `${h}px` }} />
         ))}
       </div>
-      <audio controls className="mt-5 w-full" src={audioUrl}>
+      <audio controls className="mt-5 w-full" crossOrigin="use-credentials" src={mediaUrl(audioUrl)}>
         Your browser does not support the audio element.
       </audio>
     </div>

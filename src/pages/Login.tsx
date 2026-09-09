@@ -13,7 +13,6 @@ import { signIn } from '@/data/auth'
 
 interface LoginFields {
   email: string
-  password: string
 }
 
 const Login = () => {
@@ -24,7 +23,7 @@ const Login = () => {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<LoginFields>({ defaultValues: { email: '', password: '' } })
+  } = useForm<LoginFields>({ defaultValues: { email: '' } })
 
   useEffect(() => {
     if (USE_FIXTURES) return
@@ -34,7 +33,7 @@ const Login = () => {
       } = await getSession()
       if (session) navigate('/')
     }
-    checkSession()
+    checkSession().catch(() => setError('Unable to check your session. Please try again.'))
   }, [navigate])
 
   const onSubmit = async (values: LoginFields) => {
@@ -46,12 +45,12 @@ const Login = () => {
       })
       return
     }
-    const result = await signIn(values.email, values.password)
-    if (result && 'error' in result && result.error) {
-      setError(result.error.message)
-      return
+    try {
+      await signIn(values.email)
+      toast({ title: 'Check your inbox', description: 'If delivery is available, a sign-in link will arrive shortly. Open it to continue.' })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to send link. Please try again.')
     }
-    navigate('/')
   }
 
   return (
@@ -85,23 +84,13 @@ const Login = () => {
                 {...register('email', { required: true })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                {...register('password', { required: true })}
-              />
-            </div>
             <Button
               type="submit"
               size="lg"
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
+              {isSubmitting ? 'Sending…' : 'Email me a sign-in link'}
             </Button>
           </form>
           <p className="mt-6 text-sm text-muted-foreground">

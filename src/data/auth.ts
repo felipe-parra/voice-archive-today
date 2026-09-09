@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/integrations/supabase/client'
+import { api, jsonBody } from './api'
+import type { Session } from '../../shared/contracts'
 import { USE_FIXTURES } from './mode'
 import { getSession, onAuthChange } from './session'
 
@@ -14,28 +16,37 @@ import { getSession, onAuthChange } from './session'
  */
 export const useAuthGuard = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [isAuthenticated, setIsAuthenticated] = useState(USE_FIXTURES)
 
   useEffect(() => {
     if (USE_FIXTURES) return
 
+    let active = true
+    let expired = false
     const checkAuth = async () => {
       const {
         data: { session },
       } = await getSession()
+      if (!active || expired) return
       if (!session) {
-        navigate('/login')
+        queryClient.clear()
+        navigate('/login', { replace: true })
       } else {
         setIsAuthenticated(true)
       }
     }
 
-    checkAuth()
+    checkAuth().catch(() => {
+      if (active) navigate('/login', { replace: true })
+    })
 
     const {
       data: { subscription },
     } = onAuthChange((_event, session) => {
       if (!session) {
+        expired = true
+        queryClient.clear()
         setIsAuthenticated(false)
         navigate('/login')
       } else {
@@ -43,27 +54,24 @@ export const useAuthGuard = () => {
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [navigate])
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [navigate, queryClient])
 
   return isAuthenticated
 }
 
-// AUTH DIRECTION (Founder, 2026-09-09): drop email+password. Login/signup should
-// be a single email field → magic link (`supabase.auth.signInWithOtp`, or the
-// equivalent on the Render backend once migrated), and add passkeys / WebAuthn
-// as a second factor-free option later. `password` here is transitional.
-export const signIn = async (email: string, password: string) => {
+// Future passkey verification can issue the same server session.
+export const signIn = async (email: string) => {
   if (USE_FIXTURES) return { demo: true }
-  return supabase.auth.signInWithPassword({ email, password })
+  return api<{ ok: true }>('/auth/magic-link', { method: 'POST', body: jsonBody({ email }) })
 }
-
-export const signUp = async (email: string, password: string) => {
-  if (USE_FIXTURES) return { demo: true }
-  return supabase.auth.signUp({ email, password })
-}
-
+export const signUp = signIn
+export const verifyMagicLink = (token: string) => api<Session>('/auth/verify', { method: 'POST', body: jsonBody({ token }) })
 export const signOut = async () => {
   if (USE_FIXTURES) return { demo: true }
-  return supabase.auth.signOut()
+  await api<void>('/auth/logout', { method: 'POST' })
+  window.dispatchEvent(new Event('session-expired'))
 }

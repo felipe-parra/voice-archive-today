@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Index from './pages/Index'
 import Login from './pages/Login'
+import VerifyMagicLink from './pages/VerifyMagicLink'
 import Register from './pages/Register'
 import Account from './pages/Account'
 import VoiceNoteDetail from './pages/VoiceNoteDetail'
@@ -26,6 +27,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
+            <Route path="/auth/verify" element={<VerifyMagicLink />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<Index />} />
