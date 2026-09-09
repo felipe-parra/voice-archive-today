@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { FileText } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface SummarizeButtonProps {
   transcript: string
@@ -23,6 +24,13 @@ export const SummarizeButton = ({
   const queryClient = useQueryClient()
 
   const handleSummarize = async () => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     setIsSummarizing(true)
     try {
       console.log('Calling summarize-transcript function...')
@@ -85,13 +93,13 @@ export const SummarizeButton = ({
 
   return (
     <Button
-      variant="secondary"
+      variant="default"
       onClick={handleSummarize}
       disabled={isSummarizing}
       className="w-full"
     >
       <FileText className="mr-2 h-4 w-4" />
-      {isSummarizing ? 'Summarizing...' : 'Summarize Transcript'}
+      {isSummarizing ? 'Summarizing…' : 'Summarize transcript'}
     </Button>
   )
 }

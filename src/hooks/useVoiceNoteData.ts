@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
 import { VoiceNote } from '@/interfaces/voice.interface'
+import { getVoiceNote, getDocumentForVoiceNote } from '@/data/voiceNotes'
 
 export const useVoiceNoteData = (id: string | undefined) => {
   const queryClient = useQueryClient()
@@ -13,18 +13,7 @@ export const useVoiceNoteData = (id: string | undefined) => {
     queryKey: ['voiceNote', id],
     queryFn: async () => {
       if (!id) throw new Error('No voice note ID provided')
-
-      const { data, error } = await supabase
-        .from('voice_notes')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) {
-        console.error('Error fetching voice note:', error)
-        throw error
-      }
-      return data
+      return getVoiceNote(id)
     },
     enabled: !!id,
   })
@@ -37,20 +26,7 @@ export const useVoiceNoteData = (id: string | undefined) => {
     queryKey: ['document', id],
     queryFn: async () => {
       if (!id) throw new Error('No voice note ID provided')
-
-      console.log('Fetching document for voice note:', id)
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('voice_note_id', id)
-        .maybeSingle()
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching document:', error)
-        throw error
-      }
-      console.log('Document data:', data)
-      return data
+      return getDocumentForVoiceNote(id)
     },
     enabled: !!id,
   })

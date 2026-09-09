@@ -8,7 +8,6 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Account from './pages/Account'
 import VoiceNoteDetail from './pages/VoiceNoteDetail'
-import CreatedBy from './components/CreatedBy'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +22,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <main className="w-screen h-full relative">
+        <main className="w-full h-full relative">
           <Toaster />
           <Sonner />
           <Routes>
@@ -34,7 +33,6 @@ const App = () => (
             <Route path="/voice-note/:id" element={<VoiceNoteDetail />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          <CreatedBy />
         </main>
       </TooltipProvider>
     </BrowserRouter>

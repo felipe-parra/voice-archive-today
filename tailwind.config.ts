@@ -25,33 +25,86 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#9b87f5",
-          foreground: "#ffffff",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#7ee787",
-          foreground: "#ffffff",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "#1A1F2C",
-          foreground: "#ffffff",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        charcoal: {
+          DEFAULT: "hsl(var(--studio-charcoal))",
+          foreground: "hsl(var(--studio-charcoal-ink))",
         },
       },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        display: [
+          "'Space Grotesk'",
+          "ui-sans-serif",
+          "system-ui",
+          "Segoe UI",
+          "Arial",
+          "sans-serif",
+        ],
+        sans: [
+          "'Inter'",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Arial",
+          "sans-serif",
+        ],
+        mono: [
+          "'Geist Mono'",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace",
+        ],
+      },
       keyframes: {
-        "bubble-float": {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-5px)" },
+        wave: {
+          "0%,100%": { transform: "scaleY(0.35)" },
+          "50%": { transform: "scaleY(1)" },
         },
-        "glow-pulse": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.7" },
+        "pulse-ring": {
+          "0%": { boxShadow: "0 0 0 0 hsl(var(--primary)/0.4)" },
+          "70%,100%": { boxShadow: "0 0 0 18px hsl(var(--primary)/0)" },
         },
       },
       animation: {
-        "bubble-float": "bubble-float 3s ease-in-out infinite",
-        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        wave: "wave 1s ease-in-out infinite",
+        "pulse-ring": "pulse-ring 1.6s ease-out infinite",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;

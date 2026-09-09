@@ -1,4 +1,3 @@
-import React from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate } from 'react-router-dom'
 import { FileText } from 'lucide-react'
+import { USE_FIXTURES } from '@/data/mode'
 
 interface EditVoiceNoteFormProps {
   voiceNote: {
@@ -50,8 +50,14 @@ export const EditVoiceNoteForm = ({
     tags: string
     transcript: string
   }) => {
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     try {
-      // Update voice note
       const { error: updateError } = await supabase
         .from('voice_notes')
         .update({
@@ -143,24 +149,15 @@ export const EditVoiceNoteForm = ({
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <Button type="button" variant={'outline'} onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant={'secondary'} type="submit">
+          <Button variant="secondary" type="submit">
             Save Changes
           </Button>
-          {/* 
-            <Button
-          variant="outline"
-          onClick={() => navigate("/voice-note/new")}
-          className="flex items-center gap-2"
-        >
-          <FileText className="h-4 w-4" />
-          Create Document
-        </Button> */}
           <Button
-            variant={'default'}
-            className="col-span-2 w-full flex items-center"
+            variant="default"
+            className="col-span-2 w-full"
             type="button"
             onClick={() => navigate(`/voice-note/${voiceNote.id ?? 'new'}`)}
           >

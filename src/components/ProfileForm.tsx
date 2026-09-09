@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/integrations/supabase/client'
+import { USE_FIXTURES } from '@/data/mode'
 
 const profileFormSchema = z.object({
   email: z.string().email(),
@@ -58,7 +59,13 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   })
 
   const onSubmit = async (values: z.infer<typeof profileFormSchema>) => {
-    setIsSaving(true)
+    if (USE_FIXTURES) {
+      toast({
+        title: 'Demo mode',
+        description: 'This action is disabled in the fixture preview.',
+      })
+      return
+    }
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -71,6 +78,8 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       })
       return
     }
+
+    setIsSaving(true)
 
     const { error } = await supabase
       .from('profiles')
@@ -114,7 +123,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                 <Input
                   {...field}
                   disabled
-                  className="bg-muted/50 text-muted-foreground"
+                  className="bg-muted text-muted-foreground"
                 />
               </FormControl>
               <FormMessage />
@@ -132,7 +141,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                 <Input
                   placeholder="Enter your full name"
                   {...field}
-                  className="bg-background border-input"
+                  className="bg-card border-input"
                 />
               </FormControl>
               <FormMessage />
@@ -148,11 +157,11 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
               <FormLabel>Gender</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger className="bg-background border-input">
+                  <SelectTrigger className="bg-card border-input">
                     <SelectValue placeholder="Select your gender" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent className="bg-black">
+                <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
@@ -178,7 +187,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                     <Button
                       variant={'outline'}
                       className={cn(
-                        'w-full pl-3 text-left font-normal bg-background',
+                        'w-full pl-3 text-left font-normal bg-card',
                         !field.value && 'text-muted-foreground'
                       )}
                     >
@@ -191,7 +200,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-black" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={field.value}
