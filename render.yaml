@@ -1,0 +1,54 @@
+# render.yaml — Render Blueprint for the voice-archive-today backend.
+#
+# STATUS: PLAN STUB. Not deployed. Paths (apps/api/Dockerfile) do not exist yet —
+# they are created in "Phase 0 — Scaffolding" of docs/render-migration.md.
+#
+# Deploy later with:  render blueprint launch   (or connect the repo in the Render dashboard)
+
+databases:
+  - name: voicetoday-db
+    plan: basic-256mb          # NOT free — Render's free Postgres is deleted 30 days after creation
+    postgresMajorVersion: "16"
+    # ipAllowList: []          # tighten once the web service's outbound IPs are known
+
+services:
+  - type: web
+    name: voicetoday-api
+    runtime: docker
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    plan: starter               # "free" also works but spins down after ~15 min idle (cold starts)
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: voicetoday-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_ORIGIN
+        value: https://app.EXAMPLE.com        # the Vercel frontend origin (edit)
+      - key: NODE_ENV
+        value: production
+      # --- set these in the Render dashboard (sync: false = not stored in the blueprint) ---
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false                            # e.g. "VoiceNote <notifications@xilo.pro>"
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: voicetoday
+      - key: R2_ENDPOINT
+        sync: false                            # https://<account>.r2.cloudflarestorage.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false                            # optional — only if Google login is wired
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

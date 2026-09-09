@@ -1,0 +1,64 @@
+# docker-compose.yml — local backing services for the voice-archive-today API.
+#
+# STATUS: PLAN STUB. The `apps/api` service it supports does not exist yet — see
+# "Phase 0 — Scaffolding" in docs/render-migration.md. This file only stands up the
+# infra the API will talk to (Postgres + an S3-compatible store). The API itself runs
+# on the host:  pnpm --filter api dev
+#
+#   docker compose up -d
+#   pnpm --filter api db:push        # sync the Drizzle schema locally
+#   MinIO console: http://localhost:9001  (minio / minio123)
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: voicetoday
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:                       # Cloudflare R2 stand-in — S3-compatible
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  createbuckets:               # one-shot: create the bucket, then exit
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set local http://minio:9000 minio minio123) do echo waiting for minio; sleep 1; done &&
+      mc mb -p local/voicetoday &&
+      mc anonymous set none local/voicetoday
+      "
+
+volumes:
+  pgdata:
+  miniodata:
+
+# Local API env (.env for `pnpm --filter api dev`):
+#   DATABASE_URL=postgres://postgres:dev@localhost:5432/voicetoday
+#   SESSION_SECRET=dev-only-change-me
+#   R2_ENDPOINT=http://localhost:9000
+#   R2_ACCESS_KEY_ID=minio
+#   R2_SECRET_ACCESS_KEY=minio123
+#   R2_BUCKET=voicetoday
+#   APP_ORIGIN=http://localhost:8080
+#   OPENAI_API_KEY=sk-...        (a real key — transcription/summary hit OpenAI even locally)
+#   RESEND_API_KEY=re_...        (optional locally)
