@@ -15,7 +15,15 @@ test('HTTP lifecycle, ownership, validation, cookie security, replay and storage
   let failDelete = false;
   const storage: ObjectStore = {
     async put(key, bytes, contentType) { objects.set(key, {bytes,contentType}); },
-    async get(key) { assert.ok(objects.has(key)); return objects.get(key)!; },
+    async get(key) { assert.ok(objects.has(key)); const o = objects.get(key)!; return {bytes:o.bytes,contentType:o.contentType,length:o.bytes.length}; },
+    async getRange(key, start, end) {
+      assert.ok(objects.has(key)); const o = objects.get(key)!; const total = o.bytes.length;
+      const slice = start === undefined && end === undefined ? o.bytes
+        : start === undefined ? o.bytes.slice(Math.max(0, total - (end ?? 0)))
+        : end === undefined ? o.bytes.slice(start)
+        : o.bytes.slice(start, end + 1);
+      return {bytes:slice,contentType:o.contentType,length:total};
+    },
     async delete(key) { if (failDelete) throw new Error('storage offline'); objects.delete(key); },
   };
   const mailer: Mailer = { async sendLink(_email, url) { links.push(url); }, async sendDocument() {} };
@@ -60,6 +68,9 @@ test('HTTP lifecycle, ownership, validation, cookie security, replay and storage
     const range = await req(`/voice-notes/${note.id}/audio`,'GET',undefined,owner,{Range:'bytes=1-3'});
     assert.equal(range.status,206); assert.deepEqual([...new Uint8Array(await range.arrayBuffer())],[2,3,4]);
     assert.equal((await req(`/voice-notes/${note.id}/audio`,'GET',undefined,owner,{Range:'bytes=20-30'})).status,416);
+    const suffixRange = await req(`/voice-notes/${note.id}/audio`,'GET',undefined,owner,{Range:'bytes=-3'});
+    assert.equal(suffixRange.status,206); assert.deepEqual([...new Uint8Array(await suffixRange.arrayBuffer())],[3,4,5]);
+    assert.equal(suffixRange.headers.get('content-range'),'bytes 2-4/5');
     assert.equal((await req(`/voice-notes/${note.id}/summary`,'POST',undefined,owner)).status,400);
     assert.equal((await req(`/voice-notes/${note.id}/transcribe`,'POST',undefined,owner)).status,200);
     const docResponse = await req(`/voice-notes/${note.id}/summary`,'POST',undefined,owner); assert.equal(docResponse.status,200);

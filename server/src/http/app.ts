@@ -110,11 +110,13 @@ export function createApp(auth: AuthService, archive: ArchiveService, repo: Repo
       c.header('Content-Range', 'bytes */0');
       return c.body(null, 416);
     }
+    // `bytes=-N` (empty match[1]) is a suffix request: match[2] is a length, not an end offset.
+    const suffix = !match[1] && !!match[2];
     let start: number | undefined;
     let end: number | undefined;
     if (match[1]) start = Number(match[1]);
     if (match[2]) end = Number(match[2]);
-    if (start !== undefined && end !== undefined && start > end) {
+    if (!suffix && start !== undefined && end !== undefined && start > end) {
       c.header('Content-Range', 'bytes */0');
       return c.body(null, 416);
     }
@@ -133,8 +135,9 @@ export function createApp(auth: AuthService, archive: ArchiveService, repo: Repo
       c.header('Content-Range', 'bytes */0');
       return c.body(null, 416);
     }
-    const normalizedStart = start !== undefined ? start : Math.max(0, length - (end ?? 0));
-    const normalizedEnd = end !== undefined ? Math.min(end, length - 1) : length - 1;
+    const suffixLength = suffix ? Math.min(end ?? 0, length) : 0;
+    const normalizedStart = suffix ? length - suffixLength : start ?? 0;
+    const normalizedEnd = suffix || end === undefined ? length - 1 : Math.min(end, length - 1);
     if (normalizedStart >= length || normalizedStart > normalizedEnd) {
       c.header('Content-Range', `bytes */${length}`);
       return c.body(null, 416);

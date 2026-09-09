@@ -18,7 +18,9 @@ const env = z.object({
   S3_ENDPOINT: z.string().url().optional(), S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().min(1), S3_ACCESS_KEY_ID: z.string().min(1), S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('false'),
-  OPENAI_API_KEY: z.string().optional(), RESEND_API_KEY: z.string().optional(), MAIL_FROM: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(), OPENAI_BASE_URL: z.string().url().optional(),
+  AI_TRANSCRIBE_MODEL: z.string().optional(), AI_SUMMARY_MODEL: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(), MAIL_FROM: z.string().optional(),
   MAIL_MODE: z.enum(['resend', 'development']).default('resend'),
   DEV_MAIL_DIRECTORY: z.string().default('/tmp/voice-archive-mail'),
   DOCUMENT_EMAIL_ENABLED: z.enum(['true', 'false']).default('false'),
@@ -34,13 +36,17 @@ await repository.migrate();
 const mailer = env.MAIL_MODE === 'development' ? new DevelopmentMailer(env.DEV_MAIL_DIRECTORY) : new ResendMailer({ apiKey: env.RESEND_API_KEY!, from: env.MAIL_FROM! });
 const storage = new S3ObjectStore({ endpoint: env.S3_ENDPOINT, region: env.S3_REGION, bucket: env.S3_BUCKET,
   accessKeyId: env.S3_ACCESS_KEY_ID, secretAccessKey: env.S3_SECRET_ACCESS_KEY, forcePathStyle: env.S3_FORCE_PATH_STYLE === 'true' });
-const intelligence = new OpenAIIntelligence({ apiKey: env.OPENAI_API_KEY ?? '' });
+const intelligence = new OpenAIIntelligence({ apiKey: env.OPENAI_API_KEY ?? '', baseUrl: env.OPENAI_BASE_URL,
+  transcribeModel: env.AI_TRANSCRIBE_MODEL, summaryModel: env.AI_SUMMARY_MODEL });
 const now = () => new Date();
 const auth = new AuthService(repository, mailer, { create: () => randomBytes(32).toString('base64url'), hash: value => createHash('sha256').update(value).digest('hex') }, now, web.origin);
 const archive = new ArchiveService({ repository, storage, intelligence, mailer, now }, env.DOCUMENT_EMAIL_ENABLED === 'true');
 const clientKey = (c: Context) => {
-  const forwarded = c.req.header('x-forwarded-for')?.split(',').map(value => value.trim()).find(Boolean);
-  return forwarded ?? getConnInfo(c).remote.address ?? 'unknown-peer';
+  // Fly's proxy sets Fly-Client-IP to the real client address; it is the only trusted source (x-forwarded-for is caller-spoofable).
+  const trusted = c.req.header('Fly-Client-IP')?.trim();
+  if (trusted) return trusted;
+  const forwarded = c.req.header('x-forwarded-for')?.split(',').map(value => value.trim()).filter(Boolean);
+  return forwarded?.at(-1) ?? getConnInfo(c).remote.address ?? 'unknown-peer';
 };
 const app = createApp(auth, archive, repository, { origins, secureCookies: env.NODE_ENV === 'production', clientKey });
 const server = serve({ fetch: app.fetch, port: env.PORT });

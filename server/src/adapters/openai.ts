@@ -1,11 +1,12 @@
 import { AppError } from '../domain/ports.js';
 import type { Intelligence } from '../domain/ports.js';
-export interface OpenAIConfig { apiKey: string; transcribeModel?: string; summaryModel?: string }
+export interface OpenAIConfig { apiKey: string; baseUrl?: string; transcribeModel?: string; summaryModel?: string }
 export class OpenAIIntelligence implements Intelligence {
   constructor(private config: OpenAIConfig) {}
   private async request(path: string, body: BodyInit, json = false): Promise<Record<string, unknown>> {
     if (!this.config.apiKey.trim()) throw new AppError(503, 'AI_NOT_CONFIGURED', 'AI processing is not configured');
-    const response = await fetch(`https://api.openai.com/v1/${path}`, { method: 'POST', headers: { Authorization: `Bearer ${this.config.apiKey}`, ...(json ? { 'Content-Type': 'application/json' } : {}) }, body, signal: AbortSignal.timeout(120000) });
+    const base = (this.config.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+    const response = await fetch(`${base}/${path}`, { method: 'POST', headers: { Authorization: `Bearer ${this.config.apiKey}`, ...(json ? { 'Content-Type': 'application/json' } : {}) }, body, signal: AbortSignal.timeout(120000) });
     if (!response.ok) throw new Error(`Intelligence provider failed (${response.status})`);
     return await response.json() as Record<string, unknown>;
   }
