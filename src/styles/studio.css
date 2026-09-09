@@ -1,0 +1,168 @@
+/*
+ * studio.css — hand-written editorial layer for voice-archive-today.
+ * Geometry lifted from felipeparra-site/src/styles/studio.css, recolored to
+ * the app's single violet accent (hsl(var(--primary)) === #6D28D9). This file
+ * is NOT the site's studio.css — it is app-scoped, token-driven, and small.
+ */
+
+/* --- Eyebrow / kicker ---------------------------------------------------- */
+.va-eyebrow {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+  font-size: 11px;
+  letter-spacing: 1.7px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+/* --- Specimen frame ---------------------------------------------------- */
+.va-specimen {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--studio-hairline-strong));
+  border-radius: 12px;
+  box-shadow: 0 18px 32px rgba(38, 32, 41, 0.09);
+  padding: 25px;
+}
+.va-specimen-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  gap: 12px;
+}
+.va-specimen-top span {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+/* --- Waveform -------------------------------------------------------------- */
+.va-wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 96px;
+}
+.va-wave > i {
+  display: block;
+  width: 5px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  background: hsl(var(--primary));
+  transform-origin: center;
+}
+.va-wave[data-recording='true'] > i {
+  animation: wave 1s ease-in-out infinite;
+}
+.va-wave[data-recording='true'] > i:nth-child(3n) {
+  animation-delay: 0.15s;
+}
+.va-wave[data-recording='true'] > i:nth-child(3n + 1) {
+  animation-delay: 0.35s;
+}
+.va-wave[data-recording='false'] > i {
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .va-wave > i {
+    animation: none !important;
+  }
+}
+
+/* --- Mic button --------------------------------------------------------- */
+.va-mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  width: 64px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 8px 24px hsl(var(--primary) / 0.35);
+  transition: transform 0.2s ease;
+}
+.va-mic:hover {
+  transform: scale(1.05);
+}
+.va-mic[data-recording='true'] {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .va-mic {
+    transition: none;
+  }
+  .va-mic[data-recording='true'] {
+    animation: none !important;
+  }
+}
+
+/* --- Lavender note panel ---------------------------------------------------- */
+.va-note {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border-radius: 8px;
+  padding: 16px 18px;
+  line-height: 1.55;
+}
+.va-note > span {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.va-note > p {
+  margin: 6px 0 0;
+}
+
+/* --- Charcoal terminal ------------------------------------------------------- */
+.va-terminal {
+  background: hsl(var(--studio-charcoal));
+  color: hsl(var(--studio-charcoal-ink));
+  border: 1px solid hsl(var(--studio-charcoal));
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+.va-terminal .va-eyebrow {
+  color: #cbb9f0;
+}
+.va-terminal a,
+.va-terminal .va-accent {
+  color: #d2bbff;
+}
+
+/* --- Text link ------------------------------------------------------------ */
+.va-text-link {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+
+/* --- MDXEditor light theme ------------------------------------------------- */
+.mdxeditor {
+  --baseBg: transparent;
+  --basePageBg: transparent;
+  --baseText: #191919;
+  --baseTextContrast: #000;
+  --baseBorder: hsl(var(--border));
+  --baseBorderHover: hsl(var(--input));
+  --accentBg: hsl(var(--secondary));
+  --accentText: hsl(var(--primary));
+  --accentSolid: hsl(var(--primary));
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+}
+.mdxeditor [role='toolbar'] {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.mdxeditor [role='toolbar'] button {
+  color: hsl(var(--foreground));
+}
+.mdxeditor [role='toolbar'] button:hover {
+  background: hsl(var(--secondary));
+}

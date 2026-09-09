@@ -23,7 +23,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <main className="w-screen h-full relative">
+        <main className="w-full h-full relative">
           <Toaster />
           <Sonner />
           <Routes>
