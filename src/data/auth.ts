@@ -49,6 +49,10 @@ export const useAuthGuard = () => {
   return isAuthenticated
 }
 
+// AUTH DIRECTION (Founder, 2026-09-09): drop email+password. Login/signup should
+// be a single email field → magic link (`supabase.auth.signInWithOtp`, or the
+// equivalent on the Render backend once migrated), and add passkeys / WebAuthn
+// as a second factor-free option later. `password` here is transitional.
 export const signIn = async (email: string, password: string) => {
   if (USE_FIXTURES) return { demo: true }
   return supabase.auth.signInWithPassword({ email, password })
