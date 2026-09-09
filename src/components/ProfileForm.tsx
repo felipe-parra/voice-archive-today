@@ -66,7 +66,6 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       })
       return
     }
-    setIsSaving(true)
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -79,6 +78,8 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       })
       return
     }
+
+    setIsSaving(true)
 
     const { error } = await supabase
       .from('profiles')
@@ -140,7 +141,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                 <Input
                   placeholder="Enter your full name"
                   {...field}
-                  className="bg-background border-input"
+                  className="bg-card border-input"
                 />
               </FormControl>
               <FormMessage />

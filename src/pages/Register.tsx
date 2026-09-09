@@ -60,18 +60,18 @@ const Register = () => {
   return (
     <AuthLayout>
       <div className="grid items-center gap-12 md:grid-cols-2">
-        <div>
+        <div className="md:pr-6">
           <p className="va-eyebrow">01 / Create account</p>
-          <h1 className="mt-6 text-5xl font-bold leading-[0.96] tracking-tight text-foreground md:text-6xl">
+          <h1 className="mt-6 text-balance text-6xl font-bold leading-[0.95] tracking-[-0.045em] text-foreground md:text-7xl">
             Start your archive.
           </h1>
-          <p className="mt-6 max-w-md text-lg text-muted-foreground">
+          <p className="mt-8 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground md:text-xl">
             Capture a thought by voice, keep the transcript, and find it later.
             One account, everything in one place.
           </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)]">
+        <div className="rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)] md:p-10">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && (
               <Alert variant="destructive">
@@ -96,7 +96,12 @@ const Register = () => {
                 {...register('password', { required: true })}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? 'Creating…' : 'Create account'}
             </Button>
           </form>

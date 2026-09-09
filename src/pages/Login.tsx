@@ -57,18 +57,18 @@ const Login = () => {
   return (
     <AuthLayout>
       <div className="grid items-center gap-12 md:grid-cols-2">
-        <div>
+        <div className="md:pr-6">
           <p className="va-eyebrow">01 / Sign in</p>
-          <h1 className="mt-6 text-5xl font-bold leading-[0.96] tracking-tight text-foreground md:text-6xl">
+          <h1 className="mt-6 text-balance text-6xl font-bold leading-[0.95] tracking-[-0.045em] text-foreground md:text-7xl">
             Welcome back.
           </h1>
-          <p className="mt-6 max-w-md text-lg text-muted-foreground">
+          <p className="mt-8 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground md:text-xl">
             Pick up your archive where you left it. Every note you have captured
             is one search away.
           </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)]">
+        <div className="rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)] md:p-10">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && (
               <Alert variant="destructive">
@@ -93,7 +93,12 @@ const Login = () => {
                 {...register('password', { required: true })}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>

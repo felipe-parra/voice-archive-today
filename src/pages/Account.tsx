@@ -77,9 +77,12 @@ const Account = () => {
       ) : (
         <div className="mx-auto max-w-2xl">
           <p className="va-eyebrow">04 / Profile</p>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+          <h1 className="mt-6 text-balance text-5xl font-bold leading-[0.95] tracking-[-0.045em] text-foreground md:text-6xl">
             Your account.
           </h1>
+          <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground">
+            Your name and details, used across the archive.
+          </p>
 
           <div className="mt-10 rounded-lg border border-border bg-card p-8 shadow-[0_18px_32px_rgba(38,32,41,0.08)]">
             {profileData ? (
