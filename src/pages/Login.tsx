@@ -81,6 +81,7 @@ const Login = () => {
                 id="email"
                 type="email"
                 autoComplete="email"
+                required
                 {...register('email', { required: true })}
               />
             </div>
@@ -90,6 +91,7 @@ const Login = () => {
                 id="password"
                 type="password"
                 autoComplete="current-password"
+                required
                 {...register('password', { required: true })}
               />
             </div>

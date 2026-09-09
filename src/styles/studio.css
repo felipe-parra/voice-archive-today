@@ -66,6 +66,15 @@
 .va-wave[data-recording='false'] > i {
   opacity: 0.55;
 }
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .va-wave > i {
     animation: none !important;
@@ -90,6 +99,15 @@
 }
 .va-mic[data-recording='true'] {
   animation: pulse-ring 1.6s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 18px hsl(var(--primary) / 0);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .va-mic {

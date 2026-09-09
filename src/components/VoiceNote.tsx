@@ -6,14 +6,19 @@ import { useToast } from '@/components/ui/use-toast'
 import { listVoiceNotes } from '@/data/voiceNotes'
 import { VoiceNote as VoiceNoteType } from '@/interfaces/voice.interface'
 
-export const VoiceNote = () => {
+export interface VoiceNoteProps {
+  isAuthenticated: boolean
+}
+
+export const VoiceNote = ({ isAuthenticated }: VoiceNoteProps) => {
   const [recordings, setRecordings] = useState<VoiceNoteType[]>([])
   const { toast } = useToast()
 
   React.useEffect(() => {
+    if (!isAuthenticated) return
     loadRecordings()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isAuthenticated])
 
   const loadRecordings = async () => {
     try {

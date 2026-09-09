@@ -3,11 +3,11 @@ import { AppShell } from '@/components/AppShell'
 import { useAuthGuard } from '@/data/auth'
 
 const Index = () => {
-  useAuthGuard()
+  const isAuthenticated = useAuthGuard()
 
   return (
     <AppShell>
-      <VoiceNote />
+      <VoiceNote isAuthenticated={isAuthenticated} />
     </AppShell>
   )
 }

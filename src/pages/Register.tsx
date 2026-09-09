@@ -51,6 +51,10 @@ const Register = () => {
       setError(result.error.message)
       return
     }
+    if (result && 'data' in result && result.data.session) {
+      navigate('/')
+      return
+    }
     toast({
       title: 'Check your inbox',
       description: 'Confirm your email to finish creating your account.',
@@ -84,6 +88,7 @@ const Register = () => {
                 id="email"
                 type="email"
                 autoComplete="email"
+                required
                 {...register('email', { required: true })}
               />
             </div>
@@ -93,6 +98,7 @@ const Register = () => {
                 id="password"
                 type="password"
                 autoComplete="new-password"
+                required
                 {...register('password', { required: true })}
               />
             </div>
