@@ -2,7 +2,7 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Upload } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { uploadVoiceNote } from '@/data/voiceNotes'
 import { USE_FIXTURES } from '@/data/mode'
 
 interface AudioFileUploadProps {
@@ -11,6 +11,7 @@ interface AudioFileUploadProps {
 
 export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
   const { toast } = useToast()
+  const [isUploading, setIsUploading] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handleFileUpload = async (
@@ -38,32 +39,8 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const fileName = `${user.id}/upload-${Date.now()}.${file.name
-        .split('.')
-        .pop()}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('voice_notes')
-        .upload(fileName, file)
-
-      if (uploadError) throw uploadError
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('voice_notes').getPublicUrl(fileName)
-
-      const { error: dbError } = await supabase.from('voice_notes').insert({
-        title: `Upload ${new Date().toLocaleTimeString()}`,
-        audio_url: publicUrl,
-        user_id: user.id,
-      })
-
-      if (dbError) throw dbError
+      setIsUploading(true)
+      await uploadVoiceNote(file, file.name, 0, file.name)
 
       toast({
         title: 'Success',
@@ -78,7 +55,7 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
         description: 'Failed to upload file. Please try again.',
         variant: 'destructive',
       })
-    }
+    } finally { setIsUploading(false) }
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -95,12 +72,13 @@ export const AudioFileUpload = ({ onUploadComplete }: AudioFileUploadProps) => {
         ref={fileInputRef}
       />
       <Button
+        disabled={isUploading}
         onClick={() => fileInputRef.current?.click()}
         variant="link"
         className="va-text-link gap-2 text-foreground"
       >
         <Upload className="h-4 w-4" />
-        <span>Upload audio</span>
+        <span>{isUploading ? 'Uploading…' : 'Upload audio'}</span>
       </Button>
     </div>
   )

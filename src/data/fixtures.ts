@@ -1,13 +1,9 @@
 /**
  * Seed content for fixture / screenshot mode. Shapes mirror
- * src/integrations/supabase/types.ts (voice_notes, documents, profiles).
+ * shared/contracts.ts (notes, documents, profiles).
  */
 
 export const FIXTURE_SESSION = {
-  access_token: 'demo-access-token',
-  refresh_token: 'demo-refresh-token',
-  expires_in: 3600,
-  token_type: 'bearer',
   user: {
     id: 'demo-user',
     aud: 'authenticated',

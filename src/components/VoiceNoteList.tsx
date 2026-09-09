@@ -19,7 +19,8 @@ import {
 import { EditVoiceNoteForm } from './EditVoiceNoteForm'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { deleteVoiceNote, transcribeVoiceNote } from '@/data/voiceNotes'
+import { mediaUrl } from '@/data/api'
 import { useToast } from '@/components/ui/use-toast'
 import { VoiceNote } from '@/interfaces/voice.interface'
 import { USE_FIXTURES } from '@/data/mode'
@@ -41,8 +42,9 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   const { toast } = useToast()
 
   const playRecording = (url: string) => {
-    const audio = new Audio(url)
-    audio.play()
+    const audio = new Audio(mediaUrl(url))
+    audio.crossOrigin = 'use-credentials'
+    audio.play().catch(() => toast({ title: 'Playback unavailable', description: 'Please open the note and try again.', variant: 'destructive' }))
   }
 
   const handleCloseSidebar = () => {
@@ -64,12 +66,7 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
   const handleDelete = async (recording: VoiceNote) => {
     if (demoGuard()) return
     try {
-      const { error } = await supabase
-        .from('voice_notes')
-        .delete()
-        .eq('id', recording.id)
-
-      if (error) throw error
+      await deleteVoiceNote(recording.id)
 
       toast({
         title: 'Success',
@@ -92,17 +89,7 @@ export const VoiceNoteList = ({ recordings, onUpdate }: VoiceNoteListProps) => {
     if (demoGuard()) return
     try {
       setIsTranscribing(voiceNote.id)
-      const { data, error } = await supabase.functions.invoke(
-        'transcribe-audio',
-        {
-          body: {
-            audioUrl: voiceNote.audio_url,
-            voiceNoteId: voiceNote.id,
-          },
-        }
-      )
-
-      if (error) throw error
+      await transcribeVoiceNote(voiceNote.id)
 
       toast({
         title: 'Success',

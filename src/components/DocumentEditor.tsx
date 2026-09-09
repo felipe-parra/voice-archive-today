@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { createDocument, updateDocument } from '@/data/voiceNotes'
 import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
 import '@mdxeditor/editor/style.css'
 import {
   MDXEditor,
+  type MDXEditorMethods,
   headingsPlugin,
   listsPlugin,
   quotePlugin,
@@ -18,7 +19,7 @@ import {
   Separator,
 } from '@mdxeditor/editor'
 import { DocumentActions } from './voice-note/DocumentActions'
-import { useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { USE_FIXTURES } from '@/data/mode'
 
 interface DocumentEditorProps {
@@ -36,31 +37,18 @@ export const DocumentEditor = ({
 }: DocumentEditorProps) => {
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
-  const [markdownUrl, setMarkdownUrl] = useState<string | null>(null)
-
-  // Query for real-time document content
-  const { data: documentContent } = useQuery({
-    queryKey: ['documentContent', documentId],
-    queryFn: async () => {
-      if (USE_FIXTURES || !documentId) return initialContent || ''
-      const { data, error } = await supabase
-        .from('documents')
-        .select('content')
-        .eq('id', documentId)
-        .single()
-      
-      if (error) throw error
-      return data?.content || ''
-    },
-    initialData: initialContent || '',
-  })
-
-  const [content, setContent] = useState(documentContent)
-
-  // Update local content when document content changes
+  const queryClient = useQueryClient()
+  const [savedId, setSavedId] = useState(documentId)
+  const [content, setContent] = useState(initialContent || '')
+  const editorRef = useRef<MDXEditorMethods>(null)
+  const markdownUrl = savedId ? `/api/documents/${encodeURIComponent(savedId)}/markdown` : null
   useEffect(() => {
-    setContent(documentContent)
-  }, [documentContent])
+    if (documentId) setSavedId(documentId)
+  }, [documentId])
+  useEffect(() => {
+    setContent(initialContent || '')
+    editorRef.current?.setMarkdown(initialContent || '')
+  }, [initialContent, voiceNoteId])
 
   const saveContent = async () => {
     if (USE_FIXTURES) {
@@ -72,48 +60,11 @@ export const DocumentEditor = ({
     }
     setIsSaving(true)
     try {
-      // Create a Blob from the markdown content
-      const blob = new Blob([content], { type: 'text/markdown' })
-      const file = new File([blob], `${title}.md`, { type: 'text/markdown' })
-
-      // Upload to storage
-      const userId = (await supabase.auth.getUser()).data.user?.id
-      if (!userId) throw new Error('User not authenticated')
-
-      const filePath = `${userId}/${voiceNoteId}/${file.name}`
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('markdown_files')
-        .upload(filePath, file, { upsert: true })
-
-      if (uploadError) throw uploadError
-
-      // Get the public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('markdown_files').getPublicUrl(filePath)
-
-      setMarkdownUrl(publicUrl)
-
-      if (documentId) {
-        const { error } = await supabase
-          .from('documents')
-          .update({
-            content,
-            markdown_url: publicUrl,
-          })
-          .eq('id', documentId)
-
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('documents').insert({
-          content,
-          markdown_url: publicUrl,
-          voice_note_id: voiceNoteId,
-          title,
-        })
-
-        if (error) throw error
-      }
+      const saved = savedId
+        ? await updateDocument(savedId, { title, content })
+        : await createDocument({ title, content, voice_note_id: voiceNoteId })
+      setSavedId(saved.id)
+      queryClient.setQueryData(['document', voiceNoteId], saved)
 
       toast({
         title: 'Success',
@@ -133,24 +84,6 @@ export const DocumentEditor = ({
     }
   }
 
-  useEffect(() => {
-    const fetchMarkdownUrl = async () => {
-      if (documentId && !USE_FIXTURES) {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('markdown_url')
-          .eq('id', documentId)
-          .single()
-
-        if (!error && data) {
-          setMarkdownUrl(data.markdown_url)
-        }
-      }
-    }
-
-    fetchMarkdownUrl()
-  }, [documentId])
-
   return (
     <div className="rounded-lg border border-border bg-card p-6">
       <div className="flex items-center justify-between mb-4">
@@ -169,6 +102,7 @@ export const DocumentEditor = ({
       </div>
       <div className="prose prose-stone max-w-none">
         <MDXEditor
+          ref={editorRef}
           markdown={content}
           onChange={setContent}
           plugins={[
@@ -193,7 +127,7 @@ export const DocumentEditor = ({
           className="mdxeditor"
         />
       </div>
-      <DocumentActions documentId={documentId} markdownUrl={markdownUrl} />
+      <DocumentActions documentId={savedId} markdownUrl={markdownUrl} />
     </div>
   )
 }

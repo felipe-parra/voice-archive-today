@@ -29,7 +29,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/integrations/supabase/client'
+import { updateProfile } from '@/data/voiceNotes'
 import { USE_FIXTURES } from '@/data/mode'
 
 const profileFormSchema = z.object({
@@ -66,48 +66,14 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       })
       return
     }
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to update your profile',
-        variant: 'destructive',
-      })
-      return
-    }
-
     setIsSaving(true)
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: values.full_name,
-        gender: values.gender,
-        birthdate: format(values.birthdate, 'yyyy-MM-dd'),
-        avatar_url: values.avatar_url,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', session.user.id)
-
-    setIsSaving(false)
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update profile',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    toast({
-      title: 'Success',
-      description: 'Profile updated successfully',
-    })
-    onSave()
+    try {
+      await updateProfile({ full_name: values.full_name, gender: values.gender, birthdate: format(values.birthdate, 'yyyy-MM-dd'), avatar_url: values.avatar_url })
+      toast({ title: 'Success', description: 'Profile updated successfully' })
+      onSave()
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update profile', variant: 'destructive' })
+    } finally { setIsSaving(false) }
   }
 
   return (

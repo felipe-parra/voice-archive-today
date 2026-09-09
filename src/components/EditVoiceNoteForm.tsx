@@ -11,7 +11,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { useToast } from '@/components/ui/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { updateVoiceNote } from '@/data/voiceNotes'
 import { useNavigate } from 'react-router-dom'
 import { FileText } from 'lucide-react'
 import { USE_FIXTURES } from '@/data/mode'
@@ -58,20 +58,10 @@ export const EditVoiceNoteForm = ({
       return
     }
     try {
-      const { error: updateError } = await supabase
-        .from('voice_notes')
-        .update({
-          title: data.title,
-          description: data.description,
-          tags: data.tags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-          transcript: data.transcript,
-        })
-        .eq('id', voiceNote.id)
-
-      if (updateError) throw updateError
+      await updateVoiceNote(voiceNote.id, {
+        title: data.title, description: data.description,
+        tags: data.tags.split(',').map(tag => tag.trim()).filter(Boolean), transcript: data.transcript,
+      })
 
       toast({
         title: 'Success',

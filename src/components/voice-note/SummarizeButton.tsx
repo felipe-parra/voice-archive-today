@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+import { summarizeVoiceNote } from '@/data/voiceNotes'
 import { Button } from '@/components/ui/button'
 import { FileText } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
@@ -33,37 +33,7 @@ export const SummarizeButton = ({
     }
     setIsSummarizing(true)
     try {
-      console.log('Calling summarize-transcript function...')
-      const { data, error } = await supabase.functions.invoke(
-        'summarize-transcript',
-        {
-          body: { transcript },
-        }
-      )
-
-      if (error) throw error
-
-      console.log('Summary generated:', data)
-      const { summary } = data
-
-      if (documentId) {
-        console.log('Updating existing document:', documentId)
-        const { error: updateError } = await supabase
-          .from('documents')
-          .update({ content: summary })
-          .eq('id', documentId)
-
-        if (updateError) throw updateError
-      } else {
-        console.log('Creating new document for voice note:', voiceNoteId)
-        const { error: insertError } = await supabase.from('documents').insert({
-          content: summary,
-          voice_note_id: voiceNoteId,
-          title,
-        })
-
-        if (insertError) throw insertError
-      }
+      await summarizeVoiceNote(voiceNoteId)
 
       // Invalidate both queries to ensure UI updates
       await Promise.all([

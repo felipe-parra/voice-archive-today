@@ -2,7 +2,7 @@ import React from 'react'
 import { Speech } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-import { supabase } from '@/integrations/supabase/client'
+import { transcribeVoiceNote } from '@/data/voiceNotes'
 import { USE_FIXTURES } from '@/data/mode'
 
 interface TranscriptDisplayProps {
@@ -30,14 +30,7 @@ export const TranscriptDisplay = ({
     try {
       setIsCreating(true)
 
-      const { data, error } = await supabase.functions.invoke(
-        'create-transcript',
-        {
-          body: { voiceNoteId },
-        }
-      )
-
-      if (error) throw error
+      const data = await transcribeVoiceNote(voiceNoteId)
 
       if (data.transcript) {
         onTranscriptCreated?.(data.transcript)

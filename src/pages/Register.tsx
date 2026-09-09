@@ -13,7 +13,6 @@ import { signUp } from '@/data/auth'
 
 interface RegisterFields {
   email: string
-  password: string
 }
 
 const Register = () => {
@@ -24,7 +23,7 @@ const Register = () => {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<RegisterFields>({ defaultValues: { email: '', password: '' } })
+  } = useForm<RegisterFields>({ defaultValues: { email: '' } })
 
   useEffect(() => {
     if (USE_FIXTURES) return
@@ -34,7 +33,7 @@ const Register = () => {
       } = await getSession()
       if (session) navigate('/')
     }
-    checkSession()
+    checkSession().catch(() => setError('Unable to check your session. Please try again.'))
   }, [navigate])
 
   const onSubmit = async (values: RegisterFields) => {
@@ -46,19 +45,12 @@ const Register = () => {
       })
       return
     }
-    const result = await signUp(values.email, values.password)
-    if (result && 'error' in result && result.error) {
-      setError(result.error.message)
-      return
+    try {
+      await signUp(values.email)
+      toast({ title: 'Check your inbox', description: 'If delivery is available, a sign-in link will arrive shortly. Open it to continue.' })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to send link. Please try again.')
     }
-    if (result && 'data' in result && result.data.session) {
-      navigate('/')
-      return
-    }
-    toast({
-      title: 'Check your inbox',
-      description: 'Confirm your email to finish creating your account.',
-    })
   }
 
   return (
@@ -92,23 +84,13 @@ const Register = () => {
                 {...register('email', { required: true })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                {...register('password', { required: true })}
-              />
-            </div>
             <Button
               type="submit"
               size="lg"
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating…' : 'Create account'}
+              {isSubmitting ? 'Sending…' : 'Email me a sign-in link'}
             </Button>
           </form>
           <p className="mt-6 text-sm text-muted-foreground">

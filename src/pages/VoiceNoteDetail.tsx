@@ -17,7 +17,7 @@ const VoiceNoteDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
-  useAuthGuard()
+  const isAuthenticated = useAuthGuard()
 
   const {
     voiceNote,
@@ -27,7 +27,7 @@ const VoiceNoteDetail = () => {
     voiceNoteError,
     documentError,
     updateVoiceNoteTranscript,
-  } = useVoiceNoteData(id)
+  } = useVoiceNoteData(isAuthenticated ? id : undefined)
 
   useEffect(() => {
     if (voiceNoteError || documentError) {
@@ -88,6 +88,7 @@ const VoiceNoteDetail = () => {
 
         {id && (
           <DocumentEditor
+            key={id}
             initialContent={document?.content}
             documentId={document?.id}
             voiceNoteId={id}
