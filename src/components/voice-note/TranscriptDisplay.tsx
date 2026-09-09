@@ -65,7 +65,7 @@ export const TranscriptDisplay = ({
         <p className="whitespace-pre-wrap">{transcript}</p>
       ) : (
         <div className="mt-3 flex flex-col items-start gap-3">
-          <p className="text-secondary-foreground/80">
+          <p className="text-secondary-foreground">
             No transcript yet for this note.
           </p>
           <Button

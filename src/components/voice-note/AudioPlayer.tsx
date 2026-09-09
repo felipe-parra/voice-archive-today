@@ -2,7 +2,12 @@ interface AudioPlayerProps {
   audioUrl: string
 }
 
-const WAVE_BARS = Array.from({ length: 40 }, (_, i) => 10 + ((i * 13) % 46))
+// Static decorative waveform — same envelope shape as the recorder specimen.
+const WAVE_BARS = Array.from({ length: 40 }, (_, i) => {
+  const envelope = Math.sin((i / 39) * Math.PI)
+  const texture = 0.5 + 0.5 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.6))
+  return Math.round(12 + 68 * envelope * texture)
+})
 
 export const AudioPlayer = ({ audioUrl }: AudioPlayerProps) => {
   if (!audioUrl) return null
@@ -10,7 +15,11 @@ export const AudioPlayer = ({ audioUrl }: AudioPlayerProps) => {
   return (
     <div className="va-specimen">
       <p className="va-eyebrow">Audio</p>
-      <div className="va-wave mt-4" data-recording="false" aria-hidden="true">
+      <div
+        className="va-wave mt-4 overflow-hidden"
+        data-recording="false"
+        aria-hidden="true"
+      >
         {WAVE_BARS.map((h, i) => (
           <i key={i} style={{ height: `${h}px` }} />
         ))}
