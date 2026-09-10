@@ -10,7 +10,7 @@
 | API container | **Fly.io** app `vat-api` (`iad`), from `server/Dockerfile` | Long-running process — the in-process delete-outbox loop and the server-wide AI concurrency cap need it. Vercel Functions was rejected: hard 4.5 MB request-body cap vs 25 MB audio uploads. |
 | Database | **Fly Postgres** `vat-db` (single node, `shared-cpu-1x`, 1 GB volume) | Same vendor, one `fly` login. Migrations self-apply on boot (`server/src/main.ts` → `repository.migrate()`). |
 | Object storage | **Fly Tigris** (`fly storage create`) | S3-compatible — the existing `S3ObjectStore` adapter talks to it unchanged. Range playback supported. |
-| Transcription + summary | **Groq** (`whisper-large-v3-turbo` + `llama-3.3-70b-versatile`) | OpenAI-compatible API; the adapter gained a `baseUrl`. ~10× cheaper than OpenAI. |
+| Transcription + summary | **Groq** (`whisper-large-v3-turbo` + `openai/gpt-oss-120b`) | OpenAI-compatible API; the adapter gained a `baseUrl`. ~10× cheaper than OpenAI. |
 | Magic-link email | **Resend** | `MAIL_MODE=resend` is required in production; needs a verified `MAIL_FROM` domain. |
 | Frontend | **Vercel** (unchanged project), `vercel.json` rewrites `/api/*` → `https://vat-api.fly.dev/api/*` | Same-origin `/api` proxy → the `__Host-` session cookie and the `Origin` allow-list work without CORS juggling. |
 
@@ -53,7 +53,7 @@ fly secrets set --app "$APP" \
   OPENAI_API_KEY="$GROQ_KEY" \
   OPENAI_BASE_URL="https://api.groq.com/openai/v1" \
   AI_TRANSCRIBE_MODEL="whisper-large-v3-turbo" \
-  AI_SUMMARY_MODEL="llama-3.3-70b-versatile" \
+  AI_SUMMARY_MODEL="openai/gpt-oss-120b" \
   RESEND_API_KEY="$RESEND_KEY" MAIL_FROM="$RESEND_FROM" \
   DOCUMENT_EMAIL_ENABLED="false"
 
