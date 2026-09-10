@@ -8,6 +8,7 @@ import { ArchiveService } from './application/archive.js';
 import { createApp } from './http/app.js';
 import { PostgresRepository } from './adapters/postgres.js';
 import { S3ObjectStore } from './adapters/s3.js';
+import { BlobObjectStore } from './adapters/blob.js';
 import { OpenAIIntelligence } from './adapters/openai.js';
 import { DevelopmentMailer, ResendMailer } from './adapters/mailer.js';
 
@@ -16,8 +17,9 @@ const env = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   DATABASE_URL: z.string().min(1), WEB_URL: z.string().url(), ALLOWED_ORIGINS: z.string().min(1),
   S3_ENDPOINT: z.string().url().optional(), S3_REGION: z.string().default('auto'),
-  S3_BUCKET: z.string().min(1), S3_ACCESS_KEY_ID: z.string().min(1), S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_BUCKET: z.string().min(1).optional(), S3_ACCESS_KEY_ID: z.string().min(1).optional(), S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('false'),
+  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(), BLOB_STORE_URL: z.string().url().optional(),
   OPENAI_API_KEY: z.string().optional(), OPENAI_BASE_URL: z.string().url().optional(),
   AI_TRANSCRIBE_MODEL: z.string().optional(), AI_SUMMARY_MODEL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(), MAIL_FROM: z.string().optional(),
@@ -34,8 +36,12 @@ if (env.MAIL_MODE === 'resend' && (!env.RESEND_API_KEY || !env.MAIL_FROM)) throw
 const repository = new PostgresRepository(env.DATABASE_URL);
 await repository.migrate();
 const mailer = env.MAIL_MODE === 'development' ? new DevelopmentMailer(env.DEV_MAIL_DIRECTORY) : new ResendMailer({ apiKey: env.RESEND_API_KEY!, from: env.MAIL_FROM! });
-const storage = new S3ObjectStore({ endpoint: env.S3_ENDPOINT, region: env.S3_REGION, bucket: env.S3_BUCKET,
-  accessKeyId: env.S3_ACCESS_KEY_ID, secretAccessKey: env.S3_SECRET_ACCESS_KEY, forcePathStyle: env.S3_FORCE_PATH_STYLE === 'true' });
+const storage = env.BLOB_READ_WRITE_TOKEN && env.BLOB_STORE_URL
+  ? new BlobObjectStore({ token: env.BLOB_READ_WRITE_TOKEN, baseUrl: env.BLOB_STORE_URL })
+  : env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
+  ? new S3ObjectStore({ endpoint: env.S3_ENDPOINT, region: env.S3_REGION, bucket: env.S3_BUCKET,
+      accessKeyId: env.S3_ACCESS_KEY_ID, secretAccessKey: env.S3_SECRET_ACCESS_KEY, forcePathStyle: env.S3_FORCE_PATH_STYLE === 'true' })
+  : (() => { throw new Error('Configure object storage: BLOB_READ_WRITE_TOKEN+BLOB_STORE_URL or S3_BUCKET+S3_ACCESS_KEY_ID+S3_SECRET_ACCESS_KEY'); })();
 const intelligence = new OpenAIIntelligence({ apiKey: env.OPENAI_API_KEY ?? '', baseUrl: env.OPENAI_BASE_URL,
   transcribeModel: env.AI_TRANSCRIBE_MODEL, summaryModel: env.AI_SUMMARY_MODEL });
 const now = () => new Date();
