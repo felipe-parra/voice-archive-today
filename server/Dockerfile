@@ -1,13 +1,15 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app/server
-COPY server/package.json server/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+COPY server/package.json server/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY server/tsconfig.json ./
 COPY server/src ./src
 COPY server/scripts ./scripts
 COPY server/migrations ./migrations
 COPY shared /app/shared
-RUN npm run build && npm prune --omit=dev
+RUN pnpm build && CI=true pnpm prune --prod
 
 FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3001
