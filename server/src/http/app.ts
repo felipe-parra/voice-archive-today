@@ -20,7 +20,7 @@ const profilePatch = z.object({ full_name: z.string().max(200).nullable().option
 
 export interface HttpConfig { origins: string[]; secureCookies: boolean; clientKey?: (context: Context) => string }
 export function createApp(auth: AuthService, archive: ArchiveService, repo: Repository, config: HttpConfig) {
-  const app = new Hono<{ Variables: { userId: string } }>();
+  const app = new Hono<{ Variables: { userId: string; userEmail: string } }>();
   const cookieName = config.secureCookies ? '__Host-va_session' : 'va_session';
   const cookieOptions = { httpOnly: true, secure: config.secureCookies, sameSite: 'Lax' as const, path: '/' };
   // Bounded short-window limits by trusted socket peer; never trust arbitrary forwarded headers.
@@ -78,6 +78,7 @@ export function createApp(auth: AuthService, archive: ArchiveService, repo: Repo
     const session = await auth.session(getCookie(c, cookieName));
     if (!session) throw new AppError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
     c.set('userId', session.user.id);
+    c.set('userEmail', session.user.email);
     await next();
   });
   const pathId = (value: string | undefined) => id.parse(value);
@@ -162,8 +163,14 @@ export function createApp(auth: AuthService, archive: ArchiveService, repo: Repo
   });
   app.post('/api/documents/:id/email', async c => {
     const body = z.object({ to: email }).strict().parse(await c.req.json());
+    // Security finding F8: sign-up is self-serve, so mailing any address would make
+    // this an open relay from our sender. A document only goes to its owner's inbox.
+    const own = c.get('userEmail');
+    if (body.to.trim().toLowerCase() !== own.trim().toLowerCase()) {
+      throw new AppError(403, 'EMAIL_RECIPIENT_NOT_ALLOWED', 'Documents can only be emailed to your own address.');
+    }
     limit(`email:${c.get('userId')}`, 5);
-    await archive.email(c.get('userId'), pathId(c.req.param('id')), body.to);
+    await archive.email(c.get('userId'), pathId(c.req.param('id')), own);
     return c.json({ ok: true });
   });
   return app;
