@@ -14,7 +14,7 @@
     "preview:fixtures": "vite preview --mode fixtures",
     "screenshots": "playwright test",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "api:test": "npm --prefix server test"
+    "api:test": "pnpm --dir server test"
   },
   "dependencies": {
     "@blocknote/core": "^0.12.4",
