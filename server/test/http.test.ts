@@ -36,6 +36,7 @@ test('HTTP lifecycle, ownership, validation, cookie security, replay and storage
     method, headers: {Origin:'https://archive.example',...(cookie ? {Cookie:cookie}:{}),...(body && !(body instanceof FormData) ? {'Content-Type':'application/json'}:{}),...extra},
     ...(body ? {body: body instanceof FormData ? body : JSON.stringify(body)} : {})
   });
+  const emails = new Map<string,string>();
   async function login() {
     const email = `${randomUUID()}@example.test`;
     assert.equal((await req('/auth/magic-link','POST',{email})).status,202);
@@ -49,7 +50,9 @@ test('HTTP lifecycle, ownership, validation, cookie security, replay and storage
     assert.match(cookie,/__Host-va_session=/);
     assert.match(cookie,/HttpOnly/); assert.match(cookie,/Secure/); assert.match(cookie,/SameSite=Lax/); assert.doesNotMatch(cookie,/Domain=/);
     assert.equal((await req('/auth/verify','POST',{token})).status,400,'link cannot be reused');
-    return cookie.split(';')[0];
+    const session = cookie.split(';')[0];
+    emails.set(session,email);
+    return session;
   }
   try {
     assert.equal((await req('/health')).status,200);
@@ -77,7 +80,8 @@ test('HTTP lifecycle, ownership, validation, cookie security, replay and storage
     const doc = await docResponse.json(); assert.match(doc.content,/Summary/);
     assert.equal((await req(`/documents/${doc.id}`,'GET',undefined,other)).status,404);
     assert.equal((await req(`/documents/${doc.id}/markdown`,'GET',undefined,other)).status,404);
-    assert.equal((await req(`/documents/${doc.id}/email`,'POST',{to:'reader@example.test'},owner)).status,503);
+    assert.equal((await req(`/documents/${doc.id}/email`,'POST',{to:'reader@example.test'},owner)).status,403,'documents are only emailed to their owner');
+    assert.equal((await req(`/documents/${doc.id}/email`,'POST',{to:emails.get(owner)},owner)).status,503);
     assert.equal((await req(`/documents/${doc.id}`,'PATCH',{content:'Edited'},owner)).status,200);
     assert.match(await (await req(`/documents/${doc.id}/markdown`,'GET',undefined,owner)).text(),/Edited/);
     assert.equal((await req('/profile','PATCH',{full_name:'Test person'},owner)).status,200);
