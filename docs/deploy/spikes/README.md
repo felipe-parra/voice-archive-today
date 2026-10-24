@@ -5,7 +5,8 @@
 | Date | 2026-10-24 |
 | Question | Where should the existing `server/` backend (PR #4, Docker, Postgres, S3-style audio storage, magic-link auth) run? It decides whether PR #5 (Fly runbook) and PR #6 (Vercel Blob adapter) move or close. |
 | Method | Two parallel read-only agent spikes, one per platform. No account, deploy or remote change. Each wrote a draft IaC file in the house convention (`aziel-template/render.yaml`: one declarative file, every non-obvious setting commented with its reason, no secret values, explicit deploy trigger, health check, runbook beside it). |
-| Status | **Spike — not a decision.** The draft IaC files live here, not at the repository root, so nothing picks them up. |
+| Decision | **2026-10-24, Founder: card-free demo on Render free web + Neon Free + Vercel Blob (PR #6).** Fly + Neon Launch stays the path for real users. `render/render.yaml` now reflects it (no Render DB, Neon `DATABASE_URL`, Blob keys) and still passes Render's JSON schema. |
+| Status | **Spike.** The draft IaC files live here, not at the repository root, so nothing picks them up. |
 
 - Fly: [`fly/SPIKE-fly.md`](fly/SPIKE-fly.md) · [`fly/fly.toml`](fly/fly.toml)
 - Render: [`render/SPIKE-render.md`](render/SPIKE-render.md) · [`render/render.yaml`](render/render.yaml)

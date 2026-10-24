@@ -1,4 +1,6 @@
 # Render Blueprint DRAFT for the voice-archive-today (VAT) backend — SPIKE ONLY, never applied.
+# DECIDED 2026-10-24 (Founder): card-free demo = Render free web + Neon Free Postgres + Vercel Blob (PR #6).
+# Render's own free Postgres is NOT used: it expires 30 days after creation (postgres/SPIKE-postgres.md).
 # Companion: SPIKE-render.md (facts, costs, verdict). Convention: ~/dev/talks/aziel-template/render.yaml.
 #
 # What this describes (derived from VAT main @ 6629174, not invented):
@@ -17,8 +19,8 @@
 #   - no auto-deploy: production runs the revision promoted by hand (same rule as aziel staging);
 #   - no secret values: `sync: false` keys are typed into the Dashboard at Blueprint creation ONLY —
 #     later Blueprint syncs ignore them, so rotation is a Dashboard action, then a restart;
-#   - region virginia: no Render region in Mexico/LatAm; Virginia matches Fly's `iad` in PR #5 so the
-#     two spikes compare like for like. Region is immutable after creation.
+#   - region virginia: no Render region in Mexico/LatAm; Virginia sits next to the Neon project
+#     (aws-us-east-1). Region is immutable after creation.
 services:
   - type: web
     name: vat-api
@@ -54,12 +56,13 @@ services:
       # Dockerfile HEALTHCHECK uses.
       - key: PORT
         value: "3001"
+      # External Neon Postgres (Free now; Launch for real users), project region aws-us-east-1 to sit
+      # next to Render `virginia`. UNPOOLED host (no `-pooler`): pg sends statement_timeout as a startup
+      # parameter (server/src/adapters/postgres.ts:12), which PgBouncer-style poolers reject. Public
+      # internet, so TLS is verified: postgresql://<role>:<password>@<endpoint>.us-east-1.aws.neon.tech/vat?sslmode=verify-full
+      # Typed into the Dashboard only; never in this file.
       - key: DATABASE_URL
-        fromDatabase:
-          name: vat-db
-          # Internal URL: private network, same region. Free web services MAY send private traffic
-          # to datastores (render.com/docs/free).
-          property: connectionString
+        sync: false
       # Exact origin of the Vercel frontend, e.g. https://voice-archive-today.vercel.app (no slash).
       # main.ts refuses to boot unless WEB_URL is an origin and appears in ALLOWED_ORIGINS.
       - key: WEB_URL
@@ -84,36 +87,16 @@ services:
         value: whisper-large-v3-turbo
       - key: AI_SUMMARY_MODEL
         value: openai/gpt-oss-120b
-      # --- Object storage: S3-compatible bucket hosted elsewhere (Cloudflare R2 assumed; UNDECIDED).
-      # If PR #6 merges and Vercel Blob is chosen instead, delete these five and add
-      # BLOB_READ_WRITE_TOKEN (sync: false) + BLOB_STORE_URL (sync: false).
-      - key: S3_ENDPOINT
+      # --- Object storage: Vercel Blob (DECIDED 2026-10-24, the card-free path). Requires PR #6's
+      # adapter to merge first; until then the server only knows S3_* and this Blueprint cannot boot.
+      - key: BLOB_READ_WRITE_TOKEN
         sync: false
-      - key: S3_BUCKET
+      - key: BLOB_STORE_URL
         sync: false
-      - key: S3_ACCESS_KEY_ID
-        sync: false
-      - key: S3_SECRET_ACCESS_KEY
-        sync: false
-      - key: S3_REGION
-        value: auto
-      - key: S3_FORCE_PATH_STYLE
-        value: "false"
       # OPEN ITEM (blocks real users, not the demo): main.ts derives the rate-limit key from
       # Fly-Client-IP, else the LAST x-forwarded-for entry. Render puts the real client FIRST and
       # appends proxies, and the Vercel rewrite adds another hop — so on Render every visitor would
       # likely share one login-limit bucket (the xilo-pro `trust proxy` lesson). Needs a small code
       # change (e.g. a CLIENT_IP_HEADER env) and a header probe on a real deploy. ASSUMED, unverified.
 
-databases:
-  - name: vat-db
-    # DEMO LEVEL: `free` — 1 GB, no backups, EXPIRES 30 days after creation (+14-day grace, then
-    # deleted with all data). Because /api/health pings the DB, expiry = API restart loop.
-    # REAL USERS: `0.1c-256mb` (legacy "basic-256mb", $6/mo, 1 GB SSD incl., +$0.30/GB, PITR).
-    plan: free
-    region: virginia
-    postgresMajorVersion: "16"
-    databaseName: vat
-    user: vat
-    # No external access. Add your IP only for a manual inspection, then remove it.
-    ipAllowList: []
+# No `databases:` block: Postgres is Neon (see DATABASE_URL above), not Render's 30-day free DB.
