@@ -1,0 +1,102 @@
+# Render Blueprint DRAFT for the voice-archive-today (VAT) backend — SPIKE ONLY, never applied.
+# DECIDED 2026-10-24 (Founder): card-free demo = Render free web + Neon Free Postgres + Vercel Blob (PR #6).
+# Render's own free Postgres is NOT used: it expires 30 days after creation (postgres/SPIKE-postgres.md).
+# Companion: SPIKE-render.md (facts, costs, verdict). Convention: ~/dev/talks/aziel-template/render.yaml.
+#
+# What this describes (derived from VAT main @ 6629174, not invented):
+#   - server/Dockerfile: Hono API on Node 24, listens on PORT (default 3001), GET /api/health -> {ok:true}
+#     (the handler pings Postgres, so a dead database fails the health check).
+#   - server/src/main.ts: migrations self-apply on boot (repository.migrate()) -> no preDeployCommand;
+#     a 60 s in-process delete-outbox loop -> must be ONE long-running process, no separate worker.
+#   - Object storage is env-selected: S3_* (any S3-compatible bucket) or, only if PR #6 merges,
+#     BLOB_READ_WRITE_TOKEN + BLOB_STORE_URL (Vercel Blob). Render has no GA object store, so the bucket
+#     lives OUTSIDE this file (see SPIKE-render.md § Storage). Render disks are NOT used: audio on a disk
+#     would forbid free plan, zero-downtime deploys and >1 instance.
+#   - Frontend stays on Vercel; vercel.json would rewrite /api/* -> https://<this-service>.onrender.com/api/*.
+#
+# Deliberately:
+#   - one instance: the login/AI/email rate limiters keep state in memory (server/src/http/app.ts);
+#   - no auto-deploy: production runs the revision promoted by hand (same rule as aziel staging);
+#   - no secret values: `sync: false` keys are typed into the Dashboard at Blueprint creation ONLY —
+#     later Blueprint syncs ignore them, so rotation is a Dashboard action, then a restart;
+#   - region virginia: no Render region in Mexico/LatAm; Virginia sits next to the Neon project
+#     (aws-us-east-1). Region is immutable after creation.
+services:
+  - type: web
+    name: vat-api
+    runtime: docker
+    repo: https://github.com/felipe-parra/voice-archive-today
+    branch: main
+    # `autoDeploy` is deprecated in the current spec; `autoDeployTrigger` replaces it.
+    # QUOTED on purpose: a bare `off` is YAML 1.1 boolean false and fails Render's schema
+    # (caught by the JSON-schema validation in SPIKE-render.md § Validation).
+    autoDeployTrigger: "off"
+    dockerfilePath: ./server/Dockerfile
+    # The Dockerfile copies server/* AND shared/ from the repo root, so the context must be the root.
+    dockerContext: .
+    # Only rebuild when backend code changes, not on frontend-only commits (relevant if trigger != off).
+    buildFilter:
+      paths:
+        - server/**
+        - shared/**
+    # DEMO LEVEL: `free` (spins down after 15 min idle, ~1 min cold start, 750 h/month per workspace).
+    # REAL USERS: change to `0.5c-512mb` (legacy "starter", $7/mo, always on). See SPIKE-render.md § Cost.
+    plan: free
+    region: virginia
+    numInstances: 1
+    # Not under any rate limiter (app.ts calls limit() only on login/AI/email routes) — avoids the
+    # xilo-pro failure where /healthz behind a global limiter got the instance marked unhealthy.
+    healthCheckPath: /api/health
+    # main.ts closes the server and the DB pool on SIGTERM and force-exits after 10 s; 30 s covers it.
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT (10000) unless set; pin it to the port the image EXPOSEs and the
+      # Dockerfile HEALTHCHECK uses.
+      - key: PORT
+        value: "3001"
+      # External Neon Postgres (Free now; Launch for real users), project region aws-us-east-1 to sit
+      # next to Render `virginia`. UNPOOLED host (no `-pooler`): pg sends statement_timeout as a startup
+      # parameter (server/src/adapters/postgres.ts:12), which PgBouncer-style poolers reject. Public
+      # internet, so TLS is verified: postgresql://<role>:<password>@<endpoint>.us-east-1.aws.neon.tech/vat?sslmode=verify-full
+      # Typed into the Dashboard only; never in this file.
+      - key: DATABASE_URL
+        sync: false
+      # Exact origin of the Vercel frontend, e.g. https://voice-archive-today.vercel.app (no slash).
+      # main.ts refuses to boot unless WEB_URL is an origin and appears in ALLOWED_ORIGINS.
+      - key: WEB_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: MAIL_MODE
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      # An address on a domain verified in Resend (customer-facing domain email, never Gmail).
+      - key: MAIL_FROM
+        sync: false
+      - key: DOCUMENT_EMAIL_ENABLED
+        value: "false"
+      # Groq via the OpenAI-compatible adapter, as in PR #5.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: AI_TRANSCRIBE_MODEL
+        value: whisper-large-v3-turbo
+      - key: AI_SUMMARY_MODEL
+        value: openai/gpt-oss-120b
+      # --- Object storage: Vercel Blob (DECIDED 2026-10-24, the card-free path). Requires PR #6's
+      # adapter to merge first; until then the server only knows S3_* and this Blueprint cannot boot.
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: BLOB_STORE_URL
+        sync: false
+      # OPEN ITEM (blocks real users, not the demo): main.ts derives the rate-limit key from
+      # Fly-Client-IP, else the LAST x-forwarded-for entry. Render puts the real client FIRST and
+      # appends proxies, and the Vercel rewrite adds another hop — so on Render every visitor would
+      # likely share one login-limit bucket (the xilo-pro `trust proxy` lesson). Needs a small code
+      # change (e.g. a CLIENT_IP_HEADER env) and a header probe on a real deploy. ASSUMED, unverified.
+
+# No `databases:` block: Postgres is Neon (see DATABASE_URL above), not Render's 30-day free DB.

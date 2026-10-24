@@ -1,0 +1,122 @@
+# Fly.io app config for the Voice Archive Today (VAT) API: the `server/` container from #4.
+# DRAFT from the 2026-10-24 spike. Nothing here has been deployed. Read SPIKE-fly.md first.
+# Runbook: docs/deploy.md (PR #5). Its stale claims are listed in SPIKE-fly.md § 6.
+#
+# This is a revision of the fly.toml already on VAT `main`, written to the house convention
+# (aziel-template render.yaml): every non-obvious setting carries its reason, and no secret values.
+#
+# What this file deliberately does NOT express, because fly.toml cannot:
+#   - secrets: DATABASE_URL, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT,
+#     OPENAI_API_KEY (the Groq key), RESEND_API_KEY, MAIL_FROM, WEB_URL, ALLOWED_ORIGINS
+#     → `fly secrets set` (CLI only). The list is the required keys of the zod schema in server/src/main.ts.
+#     WEB_URL and ALLOWED_ORIGINS are not secret, but setting them as secrets keeps per-environment origins
+#     out of git. They could move to [env].
+#   - the app itself: `fly apps create` (CLI).
+#   - the Tigris bucket: `fly storage create` (CLI). It sets AWS_* secrets, not the S3_* names the adapter
+#     reads, so they are re-set by hand (PR #5 § Deploy).
+#   - Postgres: `fly mpg create` / an external provider (CLI or dashboard). See SPIKE-fly.md § 3.
+#   - machine count: `fly scale count 1` / `fly deploy --ha=false` (CLI). See [http_service] below for why 1.
+#   - the deploy trigger: there is no GitHub integration. A deploy happens only when someone runs
+#     `fly deploy` (the equivalent of render.yaml `autoDeploy: false`).
+
+app = "vat-api"
+
+# dfw (Dallas) is the nearest Fly region to CDMX. `qro` (Querétaro) no longer appears in Fly's region list
+# (VERIFIED 2026-10-24, docs.fly.io/reference/regions), and dfw also hosts Managed Postgres.
+# The VAT main branch still says iad (Ashburn), which adds roughly 1,500 km each way (ASSUMED ~25–35 ms
+# extra RTT, not measured). iad is the cheapest priced region, so the price difference for dfw needs
+# checking (`fly platform vm-sizes` after login). If dfw turns out more expensive, iad is a deliberate trade.
+primary_region = "dfw"
+
+# main.ts handles SIGTERM and SIGINT (Fly's default kill_signal) and waits up to 10 s for in-flight
+# requests and the DB pool to close. Fly's default kill_timeout is 5 s (ASSUMED default, check the
+# config reference), which would cut a 25 MB upload mid-stream. 15 s is above the app's own 10 s cap.
+kill_signal = "SIGTERM"
+kill_timeout = 15
+
+[build]
+  # The Dockerfile build context is the repo root, because it COPYs both server/ and shared/.
+  # Run `fly deploy` from the repo root.
+  dockerfile = "server/Dockerfile"
+
+[deploy]
+  # No release_command: migrations self-apply on boot (main.ts → repository.migrate()), as PR #5 states.
+  # This differs from the house convention (aziel ADR-02: reviewed SQL applied deliberately). Revisit it
+  # once there is real data. A release_command would run migrations once per deploy, on a temporary
+  # machine, before traffic shifts.
+  #
+  # "rolling" (the default) with a single machine means a few seconds of downtime per deploy. "bluegreen"
+  # would avoid that, but it would briefly run two processes: two in-memory rate limiters, two outbox loops,
+  # and two boots racing `migrate()`. That trade is not worth it at this traffic.
+  strategy = "rolling"
+
+[env]
+  # Only non-sensitive values. Everything else is a `fly secrets set` key, listed in the header.
+  NODE_ENV = "production"
+  PORT = "3001"
+  # Tigris ignores regions ("auto") and uses virtual-hosted-style URLs, hence no path style.
+  S3_REGION = "auto"
+  S3_FORCE_PATH_STYLE = "false"
+  # main.ts refuses to boot in production unless MAIL_MODE=resend.
+  MAIL_MODE = "resend"
+  DOCUMENT_EMAIL_ENABLED = "false"
+  # Groq through the OpenAI-compatible adapter. These are not secrets. The key is OPENAI_API_KEY (a secret).
+  OPENAI_BASE_URL = "https://api.groq.com/openai/v1"
+  AI_TRANSCRIBE_MODEL = "whisper-large-v3-turbo"
+  # PR #5 says openai/gpt-oss-120b; server/.env.example says llama-3.3-70b-versatile. Pick one before deploying.
+  AI_SUMMARY_MODEL = "openai/gpt-oss-120b"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+
+  # Scale to zero. The cost driver is zero revenue: a stopped machine bills only its rootfs ($0.15/GB-mo,
+  # VERIFIED, docs.fly.io/about/pricing).
+  # The cost is a cold start of "about 2 seconds or more" (VERIFIED, docs.fly.io/launch/autostop-autostart),
+  # plus this app's boot work: the DB connection and migrate().
+  # "suspend" would resume in hundreds of ms, but Fly lists extra requirements and caveats. Try it only
+  # after measuring "stop".
+  # Stop and start are enabled together, as Fly recommends; otherwise a machine can stop and never restart.
+  # The 60 s deletion-outbox loop does NOT run while the machine is stopped. That is acceptable because
+  # the outbox is durable (main.ts) and drains on the next wake.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  # Exactly ONE machine: both rate limiters (login, AI, email) keep their state in process memory
+  # (server/src/http/app.ts `limit()`), and so does the AI concurrency cap. Two machines would double
+  # every limit. Fly cannot pin a count here, so deploy with `--ha=false`; otherwise
+  # the first deploy creates two machines.
+  processes = ["app"]
+
+  [http_service.concurrency]
+    # Requests, not connections, because the proxy multiplexes. These are deliberately low. A 25 MB audio
+    # upload and a Groq transcription each hold a request for seconds, and 512 MB of RAM is the ceiling.
+    # ASSUMED values, not load-tested.
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 40
+
+  [[http_service.checks]]
+    # /api/health runs `repo.health()`, so it checks the DB as well as the process (app.ts line 62).
+    # A DB outage therefore marks the machine unhealthy. That is intended: the app cannot serve anything
+    # without Postgres.
+    # Checks run only while the machine is running, so they do not keep a stopped machine awake.
+    # (ASSUMED from the checks model, not stated on the autostop page.)
+    # The Dockerfile HEALTHCHECK is ignored by Fly (ASSUMED). This block is the one Fly acts on.
+    grace_period = "30s"   # boot + migrate() before the first probe; raised from 20 s on main
+    interval = "30s"       # every probe is a DB round-trip; 15 s on main was twice the load for no gain
+    timeout = "5s"
+    method = "GET"
+    path = "/api/health"
+
+# No [mounts]: the API is stateless by design. Audio lives in Tigris (S3) and rows in Postgres.
+# A Fly volume is pinned to one physical host, has no replication, and Fly says a single-volume drive
+# failure loses the data (VERIFIED, docs.fly.io/volumes/overview). The app should not hold user data on one.
+# If Postgres is self-hosted on Fly, it is a SEPARATE app with its own fly.toml and [mounts] (SPIKE-fly.md § 3, option B).
+
+[[vm]]
+  # 512 MB holds a 25 MB request body buffered by bodyLimit, plus Node and the S3 SDK, with headroom.
+  # 256 MB ($2.19/mo) is untested. ASSUMED too tight for concurrent uploads.
+  size = "shared-cpu-1x"
+  memory = "512mb"
