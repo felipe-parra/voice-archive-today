@@ -9,6 +9,7 @@
 
 - Fly: [`fly/SPIKE-fly.md`](fly/SPIKE-fly.md) · [`fly/fly.toml`](fly/fly.toml)
 - Render: [`render/SPIKE-render.md`](render/SPIKE-render.md) · [`render/render.yaml`](render/render.yaml)
+- External Postgres (follow-up, same day): [`postgres/SPIKE-postgres.md`](postgres/SPIKE-postgres.md) — Neon, Supabase, Aiven, Prisma Postgres
 
 ## Side by side / Comparación
 
@@ -43,7 +44,21 @@
 2. **At the first real user:** Fly API + Tigris + external Postgres is the cheapest durable topology found (≈ $6/mo at 100 users plus the database). It needs a card, and the code is already wired for it. Render's durable floor is $13/mo, and its stack spans three vendors.
 3. **Do not run either host with PR #5's `fly postgres create`.** It is the cheap number in the runbook, but it sits on a deprecated template and a single unreplicated volume.
 
-**The deciding unknown is the same in both columns: an external managed Postgres with a free tier that does not expire.** Neither spike researched it. That is the next spike.
+**The deciding unknown was the same in both columns: an external managed Postgres with a free tier that does not expire.** The follow-up spike ([`postgres/SPIKE-postgres.md`](postgres/SPIKE-postgres.md)) answers it with **Neon**:
+
+| | Now: Render demo | Later: Fly, durable |
+|---|---|---|
+| Database | **Neon Free**, `aws-us-east-1` | Same Neon project upgraded to **Launch** |
+| Cost | $0, no card, "permanent (not a trial)" ✅ re-verified | $0.106/CU-h + $0.35/GB-mo, no minimum ✅ re-verified → ≈ $11–12/mo at ~100 users (spike arithmetic) |
+| Limits | 1 GB/project; 100 CU-h/project/month, after which compute is suspended until next month (data kept); suspends after 5 min idle; 6 h restore window ✅ re-verified | 7-day point-in-time restore (agent-reported) |
+| Connection | **Direct (unpooled) URL**, `sslmode=verify-full`. `pg` sends `statement_timeout` as a startup parameter (`server/src/adapters/postgres.ts:12`, verified), which PgBouncer-style poolers reject by default | Same |
+| Host region | Render Virginia/Ohio | **Fly `iad`, not `dfw`**: no provider has a Texas or Mexico region, so the API should sit next to the database |
+
+**Watch item, verified in code:** `server/src/main.ts:55-59` runs `archive.cleanup()` every 60 s, and each run queries `pendingDeletes()`. The database therefore never suspends while the API is awake. That is fine with Render free (sleeps after 15 min) or Fly `auto_stop`. An **always-on** API would use up Neon Free's 100 CU-h around day 16 (≈ $19.5/mo on Launch). The fix is a backend change: wake the loop only when the outbox is non-empty, or run it less often.
+
+**Not verified:** whether Neon deletes inactive Free projects (the spike reports a 90-day rule scoped to Azure; neither the plans nor the pricing page mentions it).
+
+Supabase Free pauses after a week of inactivity and has no automatic backups, and its direct connection is IPv6-only. Aiven Free does not let you pick the region and may power off after inactivity. Prisma Postgres meters operations, which the 60 s loop would eat. Details and sources are in the spike.
 
 **ES:** **¿Podemos usar Render? Sí, para un demo sin tarjeta.** Render gratis más Vercel Blob (PR #6) es lo único que corre sin tarjeta, pero su Postgres gratuito se borra cada 30 días: o el demo es desechable, o la base de datos vive fuera. Para usuarios reales, lo más barato y durable es Fly + Tigris + un Postgres externo (≈ $6/mes con 100 usuarios, más la base), y requiere tarjeta. Lo que decide en los dos casos es un Postgres externo gratuito que no caduque: es el siguiente spike.
 
@@ -54,6 +69,6 @@
    - **Render:** Render puts the client **first** in `X-Forwarded-For`, so the last entry is a proxy.
 
    Either way, every visitor may share a few buckets. This is the trust-proxy failure already seen on xilo-pro. It needs a code change, plus a header capture on a real deploy before a fix is chosen. **The runtime behaviour is not verified.**
-2. **Spike: external Postgres.** Free tier that does not expire, region near `dfw`/Ohio, backups, connection limits, card requirement.
+2. ~~Spike: external Postgres~~ — done, Neon (above). Applying it to the drafts is described, not applied, in `postgres/SPIKE-postgres.md` § 6: in `render.yaml`, delete the `databases` block and make `DATABASE_URL` a `sync: false` Neon unpooled URL. In `fly.toml`, change only comments, plus the `iad` vs `dfw` region choice.
 3. PR #5's stale claims are listed in `fly/SPIKE-fly.md` § 6. Whichever host wins, PR #5 needs a rewrite before it merges.
 4. Not checked (ASSUMED in the spike docs): `dfw` price, the Tigris free tier through Fly, Fly spend caps, R2 pricing.
